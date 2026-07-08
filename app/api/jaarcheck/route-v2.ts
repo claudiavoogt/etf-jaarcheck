@@ -18,6 +18,8 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Wisselen alleen bij: rating Neutral + 2 jaar op rij onderperformance (afwijking >= 1.5%).
  * - Eerste jaar onderperformance + Neutral => monitoren, hercheck na 6 maanden, nog niet wisselen.
  * - Sterren-trend (dalend 2 jaar op rij) is een signaal/waarschuwing, geen zelfstandige wisselreden.
+ * - UITZONDERING: MS Sterren <= 2 EN Analyst Rating Neutral => altijd direct wisselen, ongeacht trackingdifference of aantal jaren.
+ *   Zelfde combinatie-logica als de hoofdtool's vlaglogica (lage sterren + Neutral = geen vertrouwen meer).
  * - De inlegverdeling/weging wordt NOOIT aangepast op basis van deze check — puur behouden/wisselen per ETF.
  */
 
@@ -87,17 +89,29 @@ function ratingRang(ms?: string): number {
 function bepaalBeslissing(opts: {
   trackingDiff: number | null;
   msNieuw?: string;
+  msStarsNieuw?: string;
   priorConsecutive: number;
 }): { beslissing: string; toelichting: string; consecutiveUnderperformanceYears: number; onderBenchmark: boolean } {
-  const { trackingDiff, msNieuw, priorConsecutive } = opts;
+  const { trackingDiff, msNieuw, msStarsNieuw, priorConsecutive } = opts;
   const onderBenchmark = trackingDiff != null && trackingDiff > ONDERPERFORMANCE_DREMPEL;
   const consecutiveUnderperformanceYears = onderBenchmark ? priorConsecutive + 1 : 0;
+  const sterren = starCount(msStarsNieuw);
 
   // Kernregel: Negative = altijd direct wisselen, ongeacht trackrecord.
   if (msNieuw === 'Negative') {
     return {
       beslissing: 'wisselen',
       toelichting: 'Analyst Rating is Negative — directe wisselgrond, ongeacht trackrecord of aantal jaren.',
+      consecutiveUnderperformanceYears,
+      onderBenchmark,
+    };
+  }
+
+  // Uitzondering: lage sterren (<=2) + Neutral = geen vertrouwen meer, ongeacht trackingdifference/jaren.
+  if (msNieuw === 'Neutral' && sterren > 0 && sterren <= 2) {
+    return {
+      beslissing: 'wisselen',
+      toelichting: `Combinatie van lage Morningstar-sterren (${msStarsNieuw}) en Neutral rating — direct wisselen, ongeacht trackrecord.`,
       consecutiveUnderperformanceYears,
       onderBenchmark,
     };
@@ -226,6 +240,7 @@ export async function POST(request: NextRequest) {
       const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark } = bepaalBeslissing({
         trackingDiff,
         msNieuw: n.ms,
+        msStarsNieuw: n.msStars,
         priorConsecutive,
       });
 
@@ -282,6 +297,7 @@ export async function POST(request: NextRequest) {
       const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark } = bepaalBeslissing({
         trackingDiff,
         msNieuw: n.ms,
+        msStarsNieuw: n.msStars,
         priorConsecutive: 0,
       });
 

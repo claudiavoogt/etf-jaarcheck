@@ -87,7 +87,11 @@ select option{background:#1A1F36}
 .result-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
 .result-name{font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;color:var(--wit)}
 .result-isin{font-size:11px;color:var(--mint);font-weight:600;margin-left:8px}
-.result-toelichting{font-size:13px;color:var(--text-muted);line-height:1.55;margin-top:4px}
+.result-toelichting{font-size:13px;color:var(--text-muted);line-height:1.55;margin-top:4px;font-weight:600}
+.result-toelichting.behouden{color:var(--mint)}
+.result-toelichting.monitoren{color:var(--oranje)}
+.result-toelichting.wisselen{color:var(--fuchsia)}
+.result-toelichting.nieuw{color:#4682DC}
 .result-signaal{font-size:12px;color:var(--oranje);margin-top:6px;font-style:italic}
 .result-diffs{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--text-muted)}
 .result-diffs b{color:var(--wit)}
@@ -242,8 +246,8 @@ function renderProfielSummary(){
   const box = document.getElementById('profiel-summary');
   const hLabel = horizonLabels[oudeData.horizon] || oudeData.horizon || '—';
   const bronLabel = oudeBron === 'jaarcheck'
-    ? 'Vorige Jaarcheck ingeladen — de tool weet automatisch of onderperformance het eerste of tweede jaar op rij is.'
-    : 'Hoofdtool-export ingeladen (bootstrap, jaar 1) — er is nog geen jaarcheck-geschiedenis, dus elk signaal telt als eerste jaar.';
+    ? 'Vorige jaarcheck ingeladen — onderperformance van vorig jaar telt automatisch mee.'
+    : 'Eerste jaarcheck — er is nog geen geschiedenis, dus elk signaal telt als eerste jaar.';
   box.innerHTML = `
     <div class="profiel-title">Vorige situatie</div>
     <div class="profiel-line"><strong>Datum vorige check:</strong> ${oudeData.datum || '—'}</div>
@@ -336,7 +340,7 @@ function bestaandRowHtml(etf){
   <div class="card" id="row-${id}">
     <div class="card-header">
       <div>
-        <span class="tag tag-etf">${etf.name || etf.isin || 'ETF'}</span>
+        <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;color:var(--wit)">${etf.name || etf.isin || 'ETF'}</span>
         <span class="result-isin">${etf.isin || ''}</span>
       </div>
       <div class="checkbox-row" style="margin-top:0">
@@ -369,6 +373,7 @@ function bestaandRowHtml(etf){
         </div>
       </div>
     </div>
+    <input type="hidden" id="${id}-isin" value="${(etf.isin||'').replace(/"/g,'&quot;')}">
     <input type="hidden" id="${id}-sector" value="${(etf.sector||'').replace(/"/g,'&quot;')}">
     <input type="hidden" id="${id}-region" value="${(etf.region||'').replace(/"/g,'&quot;')}">
   </div>`;
@@ -479,6 +484,14 @@ function getNieuweSituatie(){
 }
 
 async function runAnalyse(){
+  const nieuweEtfs = getNieuweSituatie();
+  const ontbrekendeTD = nieuweEtfs.filter(e => !e.verwijderd && (e.trackingDiff === null || e.trackingDiff === undefined || isNaN(e.trackingDiff)));
+  if(ontbrekendeTD.length){
+    const namen = ontbrekendeTD.map(e => e.isin || e.id).join(', ');
+    const doorgaan = confirm(`Bij ${ontbrekendeTD.length} ETF('s) is geen trackingdifference ingevuld (${namen}). Zonder trackingdifference wordt alleen op basis van de rating beoordeeld. Toch doorgaan met de analyse?`);
+    if(!doorgaan) return;
+  }
+
   const btn = document.getElementById('analyse-btn');
   btn.disabled = true;
   btn.textContent = 'Bezig met analyseren…';
@@ -486,7 +499,7 @@ async function runAnalyse(){
     const datum = new Date().toISOString().slice(0,10);
     const payload = {
       vorig: oudeData,
-      nieuw: { datum, etfs: getNieuweSituatie() }
+      nieuw: { datum, etfs: nieuweEtfs }
     };
     const res = await fetch('/api/jaarcheck', {
       method: 'POST',
@@ -538,7 +551,7 @@ function resultRowHtml(r){
       <div><span class="result-name">${r.name || r.isin || r.id}</span><span class="result-isin">${r.isin||''}</span></div>
       <span class="tag tag-${cls}">${label}</span>
     </div>
-    <div class="result-toelichting">${r.toelichting}</div>
+    <div class="result-toelichting ${cls}">${r.toelichting}</div>
     ${r.sterrenSignaal ? `<div class="result-signaal">⚠ ${r.sterrenSignaal}</div>` : ''}
     ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
   </div>`;
