@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETF Jaarcheck</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paars:#6B2D84;
+  --fuchsia:#E21B70;
+  --navy:#1A1F36;
+  --mint:#3EDCB1;
+  --oranje:#FF6B35;
+  --smoke:#F5F5F5;
+  --wit:#FFFFFF;
+  --gradient-sunset:linear-gradient(135deg,#6B2D84 0%,#FF6B35 100%);
+  --gradient-dark:linear-gradient(135deg,#1A1F36 0%,#6B2D84 100%);
+  --gradient-cta:linear-gradient(135deg,#E21B70 0%,#6B2D84 100%);
+  --border:#2e3255;
+  --text-muted:#8890b8;
+}
+body{font-family:'Lora',serif;background:var(--navy);color:var(--wit);min-height:100vh;font-size:15px;line-height:1.65}
+.header{background:var(--gradient-dark);padding:0;border-bottom:2px solid var(--paars)}
+.header-inner{max-width:1160px;margin:0 auto;padding:24px 28px;display:flex;align-items:center;justify-content:space-between}
+.header-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.5px;color:var(--wit)}
+.header-title span{color:var(--mint)}
+.header-sub{font-family:'Lora',serif;font-style:italic;font-size:13px;color:var(--text-muted);margin-top:3px}
+.container{max-width:1160px;margin:0 auto;padding:32px 28px}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px}
+.metric{background:#212645;border:1px solid var(--border);border-radius:12px;padding:16px 12px;text-align:center}
+.metric-label{font-family:'Montserrat',sans-serif;font-weight:400;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#aab0cc;margin-bottom:8px}
+.metric-val{font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;letter-spacing:-0.5px;color:var(--wit)}
+.card{background:#212645;border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.tag{font-family:'Montserrat',sans-serif;font-weight:700;font-size:10px;letter-spacing:0.8px;text-transform:uppercase;padding:5px 12px;border-radius:20px;display:inline-block}
+.tag-etf{background:rgba(255,255,255,0.08);color:var(--text-muted)}
+.tag-herb{background:rgba(62,220,177,0.15);color:var(--mint)}
+.tag-uit{background:rgba(226,27,112,0.15);color:var(--fuchsia)}
+.tag-gold{background:rgba(255,200,0,0.15);color:#ffd24d}
+.tag-silver{background:rgba(180,180,180,0.15);color:#c8c8c8}
+.tag-bronze{background:rgba(255,107,53,0.15);color:var(--oranje)}
+.tag-neutral{background:rgba(70,130,220,0.15);color:#4682DC}
+.tag-negative{background:rgba(226,27,112,0.15);color:var(--fuchsia)}
+.tag-behouden{background:rgba(62,220,177,0.15);color:var(--mint)}
+.tag-monitoren{background:rgba(255,107,53,0.18);color:var(--oranje)}
+.tag-wisselen{background:rgba(226,27,112,0.18);color:var(--fuchsia)}
+.tag-verwijderd{background:rgba(255,255,255,0.06);color:var(--text-muted)}
+.tag-nieuw{background:rgba(70,130,220,0.15);color:#4682DC}
+.row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;margin-top:12px}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;margin-top:12px}
+label{font-family:'Montserrat',sans-serif;font-weight:400;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:#aab0cc;display:block;margin-bottom:6px}
+label span{font-weight:400;text-transform:none;letter-spacing:0}
+input,select{width:100%;background:#161930;border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:14px;font-family:'Lora',serif;color:var(--wit);outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--paars)}
+input::placeholder{color:#4a5070}
+input:disabled{opacity:.4}
+select option{background:#1A1F36}
+.readonly-box{background:#161930;border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--text-muted)}
+.btn{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.5px;padding:10px 20px;border-radius:8px;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--wit);transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--paars);background:rgba(107,45,132,0.2)}
+.btn:disabled{opacity:0.35;cursor:not-allowed}
+.btn-primary{background:var(--gradient-cta);border-color:transparent;color:var(--wit)}
+.btn-primary:hover{opacity:0.9;background:var(--gradient-cta)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-danger{border-color:rgba(226,27,112,0.3);color:var(--fuchsia)}
+.btn-danger:hover{background:rgba(226,27,112,0.1)}
+.upload-zone{border:2px dashed var(--paars);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;background:rgba(107,45,132,0.08);transition:all .2s}
+.upload-zone:hover{background:rgba(107,45,132,0.15)}
+.upload-zone.dragover{background:rgba(62,220,177,0.1);border-color:var(--mint)}
+.upload-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;color:var(--wit);margin-bottom:6px}
+.upload-sub{font-family:'Lora',serif;font-style:italic;font-size:12px;color:var(--text-muted)}
+.profiel-card{background:linear-gradient(135deg,rgba(62,220,177,0.08) 0%,rgba(33,38,69,1) 60%);border:1.5px solid rgba(62,220,177,0.3);border-radius:14px;padding:22px;margin-bottom:20px}
+.profiel-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mint);margin-bottom:14px}
+.profiel-line{font-family:'Montserrat',sans-serif;font-size:12px;color:var(--wit);margin-bottom:6px}
+.profiel-line strong{color:var(--mint)}
+.overzicht{background:#212645;border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.overzicht-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mint);margin-bottom:16px}
+.result-row{border-left:3px solid var(--border);background:rgba(255,255,255,0.02);border-radius:8px;padding:16px 18px;margin-bottom:12px}
+.result-row.behouden{border-left-color:var(--mint)}
+.result-row.monitoren{border-left-color:var(--oranje)}
+.result-row.wisselen{border-left-color:var(--fuchsia)}
+.result-row.verwijderd{border-left-color:var(--text-muted);opacity:.75}
+.result-row.nieuw{border-left-color:#4682DC}
+.result-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.result-name{font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;color:var(--wit)}
+.result-isin{font-size:11px;color:var(--mint);font-weight:600;margin-left:8px}
+.result-toelichting{font-size:13px;color:var(--text-muted);line-height:1.55;margin-top:4px}
+.result-signaal{font-size:12px;color:var(--oranje);margin-top:6px;font-style:italic}
+.result-diffs{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--text-muted)}
+.result-diffs b{color:var(--wit)}
+.diff-changed{color:var(--oranje)!important;font-weight:700}
+.flags-card{background:#212645;border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.disclaimer{background:linear-gradient(135deg,rgba(107,45,132,0.2) 0%,rgba(226,27,112,0.1) 100%);border:1px solid rgba(107,45,132,0.4);border-radius:12px;padding:18px 22px;margin-bottom:24px}
+.disclaimer-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mint);margin-bottom:6px}
+.disclaimer-text{font-family:'Lora',serif;font-style:italic;font-size:13px;color:var(--text-muted);line-height:1.6}
+.brand-footer{margin-top:24px;padding:24px 0;text-align:center;border-top:1px solid rgba(255,255,255,0.08)}
+.brand-footer a{color:var(--mint);text-decoration:underline}
+.brand-footer-text{font-family:'Lora',serif;font-size:13px;color:var(--text-muted)}
+.brand-footer-copy{font-family:'Lora',serif;font-size:11px;color:#ffffff;margin-top:6px}
+.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.sug-box{background:#1e2444;border:1px solid var(--paars);border-radius:8px;overflow-y:auto;max-height:280px;position:absolute;z-index:30;width:100%;top:calc(100% + 4px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.sug-item{padding:11px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);color:var(--wit)}
+.sug-item:last-child{border-bottom:none}
+.sug-item:hover{background:rgba(107,45,132,0.3);color:var(--mint)}
+.checkbox-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.checkbox-row input{width:auto}
+.checkbox-row label{margin:0;font-size:11px}
+@media(max-width:720px){
+  .metrics{grid-template-columns:repeat(3,1fr)}
+  .row2,.row3,.row4{grid-template-columns:1fr 1fr}
+  .header-inner{padding:18px 20px}
+  .container{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <div class="header-title">ETF <span>Jaarcheck</span></div>
+      <div class="header-sub">Jaarlijkse kwaliteitscheck per ETF — benchmark, rating, behouden of wisselen</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STAP 1: upload oude situatie -->
+  <div class="card" id="upload-card">
+    <div class="card-header"><span class="tag tag-etf">Stap 1</span><span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px">Laad je vorige situatie in</span></div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-title">📂 Sleep hier je JSON-bestand, of klik om te kiezen</div>
+      <div class="upload-sub">Gebruik het bestand dat je vorig jaar exporteerde — via "Sla analyse op" (hoofdtool, jaar 1) of via "Sla jaarcheck op" (deze tool, jaar 2 en verder)</div>
+    </div>
+    <input type="file" id="file-input" accept="application/json,.json" style="display:none" onchange="handleFile(this.files[0])">
+    <div id="upload-error" style="display:none;margin-top:12px;padding:10px 16px;border-radius:8px;background:rgba(226,27,112,0.07);border:1px solid rgba(226,27,112,0.25);font-family:'Montserrat',sans-serif;font-size:12px;color:var(--fuchsia)"></div>
+  </div>
+
+  <div id="profiel-summary" class="profiel-card" style="display:none"></div>
+
+  <div id="invoer-wrap"></div>
+
+  <div class="actions" id="add-actions" style="display:none;margin-bottom:20px">
+    <button class="btn" onclick="addNieuwEtf()">+ Nieuw ETF toevoegen</button>
+    <button class="btn btn-primary" onclick="runAnalyse()" id="analyse-btn">Analyseer jaarcheck →</button>
+  </div>
+
+  <div id="output" style="display:none">
+
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Totaal</div><div class="metric-val" id="m-totaal">0</div></div>
+      <div class="metric"><div class="metric-label">Behouden</div><div class="metric-val" id="m-behouden" style="color:var(--mint)">0</div></div>
+      <div class="metric"><div class="metric-label">Monitoren</div><div class="metric-val" id="m-monitoren" style="color:var(--oranje)">0</div></div>
+      <div class="metric"><div class="metric-label">Wisselen</div><div class="metric-val" id="m-wisselen" style="color:var(--fuchsia)">0</div></div>
+      <div class="metric"><div class="metric-label">Nieuw / Weg</div><div class="metric-val" id="m-nieuwweg">0</div></div>
+    </div>
+
+    <div class="overzicht" id="resultaten-card">
+      <div class="overzicht-title">Resultaten per ETF</div>
+      <div id="resultaten-list"></div>
+    </div>
+
+    <div class="disclaimer">
+      <div class="disclaimer-title">Belangrijk</div>
+      <div class="disclaimer-text">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens, waaronder trackingdifference (zelf opgezocht via trackingdifferences.com) en Morningstar Rating/sterren (zelf opgezocht via morningstar.nl). De inlegverdeling van je portefeuille wordt door deze check nooit aangepast — uitsluitend behouden/monitoren/wisselen per ETF. Dit is een hulpmiddel, geen beleggingsadvies. Controleer alle gegevens altijd zelf via officiële bronnen. Juistheid en volledigheid worden niet gegarandeerd.</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="pdf-btn" onclick="downloadPDF()">↓ Sla op als PDF</button>
+      <button class="btn" onclick="slaOpAlsJaarcheckJSON()">↓ Sla jaarcheck op (voor volgend jaar)</button>
+    </div>
+
+    <div class="brand-footer">
+      <div class="brand-footer-text">
+        <a href="https://claudiavoogt.nl" target="_blank" rel="noopener noreferrer">claudiavoogt.nl</a>
+        — Beleggingsexpert &amp; investeringsmentor
+      </div>
+      <div class="brand-footer-copy">
+        © 2026 Claudia Voogt. Alle rechten voorbehouden. Deze tool mag niet worden gedeeld, gekopieerd, nagebouwd of hergebruikt zonder schriftelijke toestemming.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// Zoekfunctie draait cross-domain op de hoofdtool (etf-analyser.claudiavoogt.nl) — geen eigen database in dit project
+const ZOEK_API_BASE = 'https://etf-analyser.claudiavoogt.nl';
+
+let oudeData = null;      // geparseerde vorige-situatie JSON (bootstrap of eigen jaarcheck-export)
+let oudeBron = null;      // 'analyzer' | 'jaarcheck'
+let nieuwN = 0;           // teller voor extra (nieuw toegevoegde) ETF-ids
+let extraIds = [];        // ids van ETF's die tijdens de jaarcheck zelf zijn toegevoegd
+let laatsteResultaat = null; // laatste analyse-response, voor PDF/export
+
+const horizonLabels = {'10-15':'10–15 jaar','15-20':'15–20 jaar','20+':'Meer dan 20 jaar'};
+
+/* ---------- Upload & parsing ---------- */
+
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+function handleFile(file){
+  if(!file) return;
+  const errBox = document.getElementById('upload-error');
+  errBox.style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data || !Array.isArray(data.etfs) || !data.etfs.length){
+        throw new Error('Geen geldige ETF-lijst gevonden in dit bestand.');
+      }
+      oudeData = data;
+      oudeBron = (data.versie && String(data.versie).startsWith('jaarcheck')) ? 'jaarcheck' : 'analyzer';
+      renderProfielSummary();
+      renderInvoerRijen();
+      document.getElementById('add-actions').style.display = 'flex';
+    }catch(err){
+      errBox.textContent = 'Kon dit bestand niet inlezen: ' + err.message;
+      errBox.style.display = 'block';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderProfielSummary(){
+  const box = document.getElementById('profiel-summary');
+  const hLabel = horizonLabels[oudeData.horizon] || oudeData.horizon || '—';
+  const bronLabel = oudeBron === 'jaarcheck'
+    ? 'Vorige Jaarcheck ingeladen — de tool weet automatisch of onderperformance het eerste of tweede jaar op rij is.'
+    : 'Hoofdtool-export ingeladen (bootstrap, jaar 1) — er is nog geen jaarcheck-geschiedenis, dus elk signaal telt als eerste jaar.';
+  box.innerHTML = `
+    <div class="profiel-title">Vorige situatie</div>
+    <div class="profiel-line"><strong>Datum vorige check:</strong> ${oudeData.datum || '—'}</div>
+    <div class="profiel-line"><strong>Horizon:</strong> ${hLabel} &nbsp;|&nbsp; <strong>Maandinleg:</strong> €${oudeData.inleg || 0} &nbsp;|&nbsp; <strong>Core-weging:</strong> ${oudeData.coreWeight != null ? oudeData.coreWeight + '%' : '—'}</div>
+    <div class="profiel-line"><strong>Aantal ETF's:</strong> ${oudeData.etfs.length}</div>
+    <div class="profiel-line" style="margin-top:8px;color:var(--text-muted);font-style:italic">${bronLabel}</div>
+  `;
+  box.style.display = 'block';
+}
+
+/* ---------- ISIN-zoekfunctie (voor nieuw toegevoegde ETF's en 'opnieuw opzoeken') ---------- */
+
+function trackingDiffUrl(isin){
+  return 'https://www.trackingdifferences.com/ETF/ISIN/' + encodeURIComponent((isin||'').trim().toUpperCase());
+}
+function openTrackingDiff(isin){
+  if(!isin || !isin.trim()){ alert('Geen ISIN bekend voor dit ETF — vul eerst het ISIN in.'); return; }
+  window.open(trackingDiffUrl(isin), '_blank', 'noopener');
+}
+function openTrackingDiffFromField(rowId){
+  const isin = document.getElementById(rowId+'-isin').value;
+  openTrackingDiff(isin);
+}
+
+async function zoekOpISIN(isin){
+  if(!isin || isin.trim().length < 11) return null;
+  try{
+    const res = await fetch(ZOEK_API_BASE + '/api/zoek?isin=' + encodeURIComponent(isin.trim()));
+    const etf = await res.json();
+    return etf || null;
+  }catch(e){ console.error('ISIN-zoekfout:', e); return null; }
+}
+
+let _zoekTimers = {}, _zoekResultaten = {};
+function onNaamZoek(rowId){
+  const q = document.getElementById(rowId+'-zoeknaam').value;
+  const box = document.getElementById(rowId+'-sug');
+  if(!q || q.length < 1){ box.style.display='none'; return; }
+  clearTimeout(_zoekTimers[rowId]);
+  _zoekTimers[rowId] = setTimeout(async () => {
+    try{
+      const res = await fetch(ZOEK_API_BASE + '/api/zoek?q=' + encodeURIComponent(q));
+      const resultaten = await res.json();
+      _zoekResultaten[rowId] = resultaten;
+      if(!resultaten.length){ box.style.display='none'; return; }
+      box.innerHTML = resultaten.map((e,i) => `<div class="sug-item" onmousedown="vulNieuwEtfUitZoek('${rowId}',${i})">
+        <div style="font-weight:600">${e.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${e.sector||''} — ${e.region||''}</div>
+      </div>`).join('');
+      box.style.display = 'block';
+    }catch(e){ console.error('Zoekfout:', e); }
+  }, 300);
+}
+function vulNieuwEtfUitZoek(rowId, i){
+  const etf = _zoekResultaten[rowId] && _zoekResultaten[rowId][i];
+  if(!etf) return;
+  document.getElementById(rowId+'-zoeknaam').value = etf.name;
+  document.getElementById(rowId+'-isin').value = etf.isin || '';
+  document.getElementById(rowId+'-sector').value = etf.sector || '';
+  document.getElementById(rowId+'-region').value = etf.region || '';
+  document.getElementById(rowId+'-ter').value = etf.ter || '';
+  document.getElementById(rowId+'-sug').style.display = 'none';
+}
+async function herzoekISIN(rowId){
+  const isin = document.getElementById(rowId+'-isin').value;
+  const etf = await zoekOpISIN(isin);
+  if(etf){
+    document.getElementById(rowId+'-sector').value = etf.sector || '';
+    document.getElementById(rowId+'-region').value = etf.region || '';
+    document.getElementById(rowId+'-ter').value = etf.ter || '';
+  } else {
+    alert('Geen match gevonden in de database voor dit ISIN.');
+  }
+}
+
+/* ---------- Rij-rendering: bestaande ETF's uit de oude situatie ---------- */
+
+function starsOptions(selected){
+  const opts = ['', '★','★★','★★★','★★★★','★★★★★'];
+  return opts.map(o => `<option value="${o}" ${o===selected?'selected':''}>${o||'—'}</option>`).join('');
+}
+function ratingOptions(selected){
+  const opts = ['','Gold','Silver','Bronze','Neutral','Negative'];
+  return opts.map(o => `<option value="${o}" ${o===selected?'selected':''}>${o||'—'}</option>`).join('');
+}
+
+function bestaandRowHtml(etf){
+  const id = etf.id;
+  return `
+  <div class="card" id="row-${id}">
+    <div class="card-header">
+      <div>
+        <span class="tag tag-etf">${etf.name || etf.isin || 'ETF'}</span>
+        <span class="result-isin">${etf.isin || ''}</span>
+      </div>
+      <div class="checkbox-row" style="margin-top:0">
+        <input type="checkbox" id="${id}-verwijderd" onchange="toggleVerwijderd('${id}')">
+        <label for="${id}-verwijderd">Niet meer in portefeuille</label>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Vorig jaar: ${etf.sector||'—'} · ${etf.region||'—'} · TER ${etf.ter!=null?etf.ter.toFixed(2)+'%':'—'} · MS ${etf.msStars||'—'} ${etf.ms||''}</div>
+    <div class="row4" id="${id}-fields">
+      <div>
+        <label>Trackingdifference dit jaar <span>(%)</span></label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="${id}-trackingdiff" placeholder="bijv. 0.8 of -1.2" step="0.01" style="flex:1">
+          <button class="btn btn-sm" type="button" onclick="openTrackingDiff('${(etf.isin||'').replace(/'/g,"&#39;")}')" title="Bekijk op trackingdifferences.com">🔗 TD</button>
+        </div>
+      </div>
+      <div>
+        <label>MS Sterren <span>(nu)</span></label>
+        <select id="${id}-stars">${starsOptions(etf.msStars||'')}</select>
+      </div>
+      <div>
+        <label>Analyst Rating <span>(nu)</span></label>
+        <select id="${id}-ms">${ratingOptions(etf.ms||'')}</select>
+      </div>
+      <div>
+        <label>TER % <span>(indien gewijzigd)</span></label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="${id}-ter" value="${etf.ter!=null?etf.ter:''}" step="0.01" style="flex:1">
+          <button class="btn btn-sm" type="button" onclick="herzoekISIN('${id}')" title="Opnieuw opzoeken via ISIN">🔍</button>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="${id}-sector" value="${(etf.sector||'').replace(/"/g,'&quot;')}">
+    <input type="hidden" id="${id}-region" value="${(etf.region||'').replace(/"/g,'&quot;')}">
+  </div>`;
+}
+
+function toggleVerwijderd(id){
+  const checked = document.getElementById(id+'-verwijderd').checked;
+  const fields = document.getElementById(id+'-fields');
+  fields.querySelectorAll('input,select,button').forEach(el => el.disabled = checked);
+}
+
+function nieuwRowHtml(id, n){
+  return `
+  <div class="card" id="row-${id}">
+    <div class="card-header">
+      <span class="tag tag-nieuw">Nieuw ETF</span>
+      <button class="btn btn-sm btn-danger" type="button" onclick="verwijderNieuwRow('${id}')">✕ Verwijder</button>
+    </div>
+    <div class="row2" style="position:relative">
+      <div>
+        <label>ISIN</label>
+        <input type="text" id="${id}-isin" placeholder="ISIN" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div style="position:relative">
+        <label>Naam <span>(typ om te zoeken)</span></label>
+        <input type="text" id="${id}-zoeknaam" placeholder="Naam, sector of regio" oninput="onNaamZoek('${id}')">
+        <div id="${id}-sug" class="sug-box" style="display:none"></div>
+      </div>
+      <div>
+        <label>TER %</label>
+        <input type="number" id="${id}-ter" placeholder="0.20" step="0.01">
+      </div>
+    </div>
+    <div class="row3">
+      <div>
+        <label>Trackingdifference <span>(%)</span></label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="${id}-trackingdiff" placeholder="bijv. 0.8" step="0.01" style="flex:1">
+          <button class="btn btn-sm" type="button" onclick="openTrackingDiffFromField('${id}')" title="Bekijk op trackingdifferences.com">🔗 TD</button>
+        </div>
+      </div>
+      <div>
+        <label>MS Sterren</label>
+        <select id="${id}-stars">${starsOptions('')}</select>
+      </div>
+      <div>
+        <label>Analyst Rating</label>
+        <select id="${id}-ms">${ratingOptions('')}</select>
+      </div>
+    </div>
+    <input type="hidden" id="${id}-sector" value="">
+    <input type="hidden" id="${id}-region" value="">
+  </div>`;
+}
+
+function renderInvoerRijen(){
+  const wrap = document.getElementById('invoer-wrap');
+  wrap.innerHTML = oudeData.etfs.map(bestaandRowHtml).join('');
+}
+
+function addNieuwEtf(){
+  nieuwN++;
+  const id = 'x'+nieuwN;
+  extraIds.push(id);
+  document.getElementById('invoer-wrap').insertAdjacentHTML('beforeend', nieuwRowHtml(id));
+}
+function verwijderNieuwRow(id){
+  extraIds = extraIds.filter(x => x !== id);
+  const el = document.getElementById('row-'+id);
+  if(el) el.remove();
+}
+
+/* ---------- Analyse uitvoeren ---------- */
+
+function getNieuweSituatie(){
+  const rows = [];
+  oudeData.etfs.forEach(etf => {
+    const id = etf.id;
+    const verwijderd = document.getElementById(id+'-verwijderd').checked;
+    rows.push({
+      id,
+      isin: etf.isin || '',
+      verwijderd,
+      trackingDiff: verwijderd ? null : (parseFloat(document.getElementById(id+'-trackingdiff').value) ?? null),
+      msStars: verwijderd ? '' : (document.getElementById(id+'-stars').value || ''),
+      ms: verwijderd ? '' : (document.getElementById(id+'-ms').value || ''),
+      ter: verwijderd ? null : (parseFloat(document.getElementById(id+'-ter').value) || null),
+      sector: document.getElementById(id+'-sector').value || '',
+      region: document.getElementById(id+'-region').value || '',
+    });
+  });
+  extraIds.forEach(id => {
+    const isin = document.getElementById(id+'-isin').value;
+    if(!isin) return; // lege rij overslaan
+    rows.push({
+      id,
+      isin,
+      verwijderd: false,
+      trackingDiff: parseFloat(document.getElementById(id+'-trackingdiff').value) || null,
+      msStars: document.getElementById(id+'-stars').value || '',
+      ms: document.getElementById(id+'-ms').value || '',
+      ter: parseFloat(document.getElementById(id+'-ter').value) || null,
+      sector: document.getElementById(id+'-sector').value || '',
+      region: document.getElementById(id+'-region').value || '',
+    });
+  });
+  return rows;
+}
+
+async function runAnalyse(){
+  const btn = document.getElementById('analyse-btn');
+  btn.disabled = true;
+  btn.textContent = 'Bezig met analyseren…';
+  try{
+    const datum = new Date().toISOString().slice(0,10);
+    const payload = {
+      vorig: oudeData,
+      nieuw: { datum, etfs: getNieuweSituatie() }
+    };
+    const res = await fetch('/api/jaarcheck', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('Serverfout bij analyseren');
+    const data = await res.json();
+    laatsteResultaat = data;
+    renderResultaten(data);
+  }catch(e){
+    console.error(e);
+    alert('Er ging iets mis bij het analyseren. Probeer het opnieuw.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Analyseer jaarcheck →';
+  }
+}
+
+/* ---------- Resultaten renderen ---------- */
+
+function fmtTer(v){ return v!=null ? v.toFixed(2)+'%' : '—'; }
+
+function resultRowHtml(r){
+  const label = {behouden:'Behouden', monitoren:'Monitoren', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'}[r.beslissing] || r.beslissing;
+  const cls = r.beslissing;
+  const diffs = [];
+  if(r.ter && r.ter.oud != null && r.ter.nieuw != null){
+    diffs.push(`<span>TER: <b class="${r.ter.gewijzigd?'diff-changed':''}">${fmtTer(r.ter.oud)} → ${fmtTer(r.ter.nieuw)}</b></span>`);
+  }
+  if(r.sector && (r.sector.oud || r.sector.nieuw)){
+    diffs.push(`<span>Sector: <b class="${r.sector.gewijzigd?'diff-changed':''}">${r.sector.oud||'—'} → ${r.sector.nieuw||'—'}</b></span>`);
+  }
+  if(r.region && (r.region.oud || r.region.nieuw)){
+    diffs.push(`<span>Regio: <b class="${r.region.gewijzigd?'diff-changed':''}">${r.region.oud||'—'} → ${r.region.nieuw||'—'}</b></span>`);
+  }
+  if(r.msStars && (r.msStars.oud || r.msStars.nieuw)){
+    diffs.push(`<span>Sterren: <b class="${r.msStars.gewijzigd?'diff-changed':''}">${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}</b></span>`);
+  }
+  if(r.ms && (r.ms.oud || r.ms.nieuw)){
+    diffs.push(`<span>Rating: <b class="${r.ms.gewijzigd?'diff-changed':''}">${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}</b></span>`);
+  }
+  if(r.trackingDiff != null){
+    diffs.push(`<span>Trackingdifference: <b>${r.trackingDiff.toFixed(2)}%</b></span>`);
+  }
+  return `
+  <div class="result-row ${cls}">
+    <div class="result-head">
+      <div><span class="result-name">${r.name || r.isin || r.id}</span><span class="result-isin">${r.isin||''}</span></div>
+      <span class="tag tag-${cls}">${label}</span>
+    </div>
+    <div class="result-toelichting">${r.toelichting}</div>
+    ${r.sterrenSignaal ? `<div class="result-signaal">⚠ ${r.sterrenSignaal}</div>` : ''}
+    ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
+  </div>`;
+}
+
+function renderResultaten(data){
+  document.getElementById('output').style.display = 'block';
+  const s = data.samenvatting;
+  document.getElementById('m-totaal').textContent = s.totaal;
+  document.getElementById('m-behouden').textContent = s.behouden;
+  document.getElementById('m-monitoren').textContent = s.monitoren;
+  document.getElementById('m-wisselen').textContent = s.wisselen;
+  document.getElementById('m-nieuwweg').textContent = (s.nieuw + s.verwijderd);
+
+  // Sorteer: wisselen eerst, dan monitoren, dan behouden, dan nieuw, dan verwijderd
+  const volgorde = {wisselen:0, monitoren:1, behouden:2, nieuw:3, verwijderd:4};
+  const gesorteerd = [...data.resultaten].sort((a,b) => (volgorde[a.beslissing]??9) - (volgorde[b.beslissing]??9));
+  document.getElementById('resultaten-list').innerHTML = gesorteerd.map(resultRowHtml).join('');
+
+  document.getElementById('output').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ---------- Eigen JSON-export (voor volgend jaar chainen) ---------- */
+
+function slaOpAlsJaarcheckJSON(){
+  if(!laatsteResultaat){ alert('Voer eerst de analyse uit.'); return; }
+  const datum = new Date().toISOString().slice(0,10);
+  const etfs = laatsteResultaat.resultaten
+    .filter(r => r.beslissing !== 'verwijderd')
+    .map(r => ({
+      id: r.id,
+      isin: r.isin || '',
+      name: r.name || '',
+      sector: r.sector ? r.sector.nieuw : '',
+      region: r.region ? r.region.nieuw : '',
+      ter: r.ter ? r.ter.nieuw : null,
+      msStars: r.msStars ? r.msStars.nieuw : '',
+      ms: r.ms ? r.ms.nieuw : '',
+      trackingDiff: r.trackingDiff,
+      consecutiveUnderperformanceYears: r.consecutiveUnderperformanceYears || 0,
+      dalendeSterrenJaren: r.dalendeSterrenJaren || 0,
+      beslissingVorigJaar: r.beslissing,
+    }));
+  const data = {
+    versie: 'jaarcheck-1.0',
+    datum,
+    horizon: laatsteResultaat.horizon || '',
+    inleg: laatsteResultaat.inleg || 0,
+    coreWeight: laatsteResultaat.coreWeight ?? null,
+    etfs
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `etf-jaarcheck-${datum}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- PDF-export (zelfde architectuur als hoofdtool: losse off-screen containers) ---------- */
+
+async function downloadPDF(){
+  if(!laatsteResultaat){ alert('Voer eerst de analyse uit.'); return; }
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = true;
+  btn.textContent = 'Bezig met maken…';
+  try{
+    const data = laatsteResultaat;
+    const s = data.samenvatting;
+    const datum = new Date().toISOString().slice(0,10);
+
+    const headerHtml = `
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #6B2D84;padding-bottom:12px;margin-bottom:16px">
+        <div>
+          <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:20px;color:#1A1F36">ETF <span style="color:#6B2D84">Jaarcheck</span></div>
+          <div style="font-family:Lora,serif;font-style:italic;font-size:12px;color:#555;margin-top:3px">Jaarlijkse kwaliteitscheck per ETF</div>
+        </div>
+        <div style="font-family:Montserrat,sans-serif;font-size:11px;color:#6B2D84;font-weight:700">claudiavoogt.nl</div>
+      </div>`;
+
+    const page = document.createElement('div');
+    page.style.cssText = 'position:fixed;top:-9999px;left:0;width:1060px;background:white;color:#1A1F36;font-family:Montserrat,sans-serif;padding:20px 30px;';
+    page.innerHTML = headerHtml;
+
+    let metricsHtml = '<div style="display:flex;gap:10px;margin-bottom:18px">';
+    [['Totaal', s.totaal, '#6B2D84'], ['Behouden', s.behouden, '#0a5c3e'], ['Monitoren', s.monitoren, '#c07840'], ['Wisselen', s.wisselen, '#c0003a'], ['Nieuw/Weg', s.nieuw + s.verwijderd, '#1A1F36']]
+      .forEach(([label,val,color]) => {
+        metricsHtml += `<div style="flex:1;border:1px solid #d0c4e0;border-top:3px solid #6B2D84;border-radius:6px;padding:10px 8px;text-align:center">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#1A1F36;font-weight:700">${label}</div>
+          <div style="font-size:20px;font-weight:800;color:${color}">${val}</div>
+        </div>`;
+      });
+    metricsHtml += '</div>';
+    page.innerHTML += metricsHtml;
+
+    const volgorde = {wisselen:0, monitoren:1, behouden:2, nieuw:3, verwijderd:4};
+    const gesorteerd = [...data.resultaten].sort((a,b) => (volgorde[a.beslissing]??9) - (volgorde[b.beslissing]??9));
+    const kleurPerBeslissing = {behouden:'#3edcb1', monitoren:'#FF6B35', wisselen:'#c0003a', verwijderd:'#8890b8', nieuw:'#4682DC'};
+    const labelPerBeslissing = {behouden:'Behouden', monitoren:'Monitoren', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'};
+
+    let tabelHtml = '<div style="background:white;border:1px solid #d0c4e0;border-radius:8px;padding:16px;margin-bottom:16px">';
+    tabelHtml += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#6B2D84;margin-bottom:12px">Resultaten per ETF</div>';
+    gesorteerd.forEach(r => {
+      const kleur = kleurPerBeslissing[r.beslissing] || '#8890b8';
+      tabelHtml += `<div style="border-left:3px solid ${kleur};background:#f9f8fc;border-radius:6px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;font-size:13px;color:#1A1F36">${r.name||r.isin||r.id} <span style="font-size:10px;color:#6B2D84;font-weight:600">${r.isin||''}</span></span>
+          <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:${kleur}">${labelPerBeslissing[r.beslissing]||r.beslissing}</span>
+        </div>
+        <div style="font-size:11px;color:#333;margin-top:4px;line-height:1.5">${r.toelichting}</div>
+        ${r.sterrenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.sterrenSignaal}</div>` : ''}
+      </div>`;
+    });
+    tabelHtml += '</div>';
+
+    let disclaimerHtml = `<div style="border:1px solid #d0c4e0;border-radius:8px;padding:12px 16px;margin-top:6px">
+      <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:10px;color:#6B2D84;margin-bottom:4px">BELANGRIJK</div>
+      <div style="font-size:9px;color:#1A1F36;line-height:1.5">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens. De inlegverdeling wordt door deze check nooit aangepast. Dit is een hulpmiddel, geen beleggingsadvies.</div>
+    </div>`;
+
+    let footerHtml = `<div style="margin-top:16px;text-align:center;font-size:9px;color:#888">claudiavoogt.nl — © ${new Date().getFullYear()} Claudia Voogt</div>`;
+
+    page.innerHTML += tabelHtml + disclaimerHtml + footerHtml;
+    document.body.appendChild(page);
+
+    const canvas = await html2canvas(page, {scale:2, backgroundColor:'#ffffff', windowWidth:1060});
+    document.body.removeChild(page);
+
+    const pdf = new jspdf.jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    pdf.save(`ETF-Jaarcheck-${datum}.pdf`);
+  }catch(e){
+    console.error('PDF fout:', e);
+    alert('Er ging iets mis bij het maken van de PDF. Probeer het opnieuw.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '↓ Sla op als PDF';
+  }
+}
+</script>
+</body>
+</html>
