@@ -636,6 +636,20 @@ async function downloadPDF(){
     page.style.cssText = 'position:fixed;top:-9999px;left:0;width:1060px;background:white;color:#1A1F36;font-family:Montserrat,sans-serif;padding:20px 30px;';
     page.innerHTML = headerHtml;
 
+    // Vorige situatie (staat op het scherm vóór de metrics, dus ook hier eerst)
+    const hLabelPdf = horizonLabels[oudeData.horizon] || oudeData.horizon || '—';
+    const bronLabelPdf = oudeBron === 'jaarcheck'
+      ? 'Vorige jaarcheck ingeladen — onderperformance van vorig jaar telt automatisch mee.'
+      : 'Eerste jaarcheck — er is nog geen geschiedenis, dus elk signaal telt als eerste jaar.';
+    let profielHtmlPdf = '<div style="background:white;border:1px solid #d0c4e0;border-radius:8px;padding:14px;margin-bottom:16px">';
+    profielHtmlPdf += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#6B2D84;margin-bottom:8px">Vorige situatie</div>';
+    profielHtmlPdf += `<div style="font-size:11px;color:#1A1F36;margin-bottom:4px"><strong>Datum vorige check:</strong> ${oudeData.datum || '—'}</div>`;
+    profielHtmlPdf += `<div style="font-size:11px;color:#1A1F36;margin-bottom:4px"><strong>Horizon:</strong> ${hLabelPdf} &nbsp;|&nbsp; <strong>Maandinleg:</strong> €${oudeData.inleg || 0} &nbsp;|&nbsp; <strong>Core-weging:</strong> ${oudeData.coreWeight != null ? oudeData.coreWeight + '%' : '—'}</div>`;
+    profielHtmlPdf += `<div style="font-size:11px;color:#1A1F36;margin-bottom:4px"><strong>Aantal ETF's:</strong> ${oudeData.etfs.length}</div>`;
+    profielHtmlPdf += `<div style="font-size:10px;color:#555;font-style:italic;margin-top:4px">${bronLabelPdf}</div>`;
+    profielHtmlPdf += '</div>';
+    page.innerHTML += profielHtmlPdf;
+
     let metricsHtml = '<div style="display:flex;gap:10px;margin-bottom:18px">';
     [['Totaal', s.totaal, '#6B2D84'], ['Behouden', s.behouden, '#0a5c3e'], ['Monitoren', s.monitoren, '#c07840'], ['Wisselen', s.wisselen, '#c0003a'], ['Nieuw/Weg', s.nieuw + s.verwijderd, '#1A1F36']]
       .forEach(([label,val,color]) => {
@@ -656,6 +670,14 @@ async function downloadPDF(){
     tabelHtml += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#6B2D84;margin-bottom:12px">Resultaten per ETF</div>';
     gesorteerd.forEach(r => {
       const kleur = kleurPerBeslissing[r.beslissing] || '#8890b8';
+      const diffPartsPdf = [];
+      if(r.ter && r.ter.oud != null && r.ter.nieuw != null) diffPartsPdf.push(`TER: ${fmtTer(r.ter.oud)} → ${fmtTer(r.ter.nieuw)}`);
+      if(r.sector && (r.sector.oud || r.sector.nieuw)) diffPartsPdf.push(`Sector: ${r.sector.oud||'—'} → ${r.sector.nieuw||'—'}`);
+      if(r.region && (r.region.oud || r.region.nieuw)) diffPartsPdf.push(`Regio: ${r.region.oud||'—'} → ${r.region.nieuw||'—'}`);
+      if(r.msStars && (r.msStars.oud || r.msStars.nieuw)) diffPartsPdf.push(`Sterren: ${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}`);
+      if(r.ms && (r.ms.oud || r.ms.nieuw)) diffPartsPdf.push(`Rating: ${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}`);
+      if(r.trackingDiff != null) diffPartsPdf.push(`Trackingdifference: ${r.trackingDiff.toFixed(2)}%`);
+      const diffsHtmlPdf = diffPartsPdf.length ? `<div style="font-size:9px;color:#555;margin-top:6px">${diffPartsPdf.join(' &nbsp;·&nbsp; ')}</div>` : '';
       tabelHtml += `<div style="border-left:3px solid ${kleur};background:#f9f8fc;border-radius:6px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-weight:700;font-size:13px;color:#1A1F36">${r.name||r.isin||r.id} <span style="font-size:10px;color:#6B2D84;font-weight:600">${r.isin||''}</span></span>
@@ -663,16 +685,20 @@ async function downloadPDF(){
         </div>
         <div style="font-size:11px;color:#333;margin-top:4px;line-height:1.5">${r.toelichting}</div>
         ${r.sterrenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.sterrenSignaal}</div>` : ''}
+        ${diffsHtmlPdf}
       </div>`;
     });
     tabelHtml += '</div>';
 
     let disclaimerHtml = `<div style="border:1px solid #d0c4e0;border-radius:8px;padding:12px 16px;margin-top:6px">
       <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:10px;color:#6B2D84;margin-bottom:4px">BELANGRIJK</div>
-      <div style="font-size:9px;color:#1A1F36;line-height:1.5">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens. De inlegverdeling wordt door deze check nooit aangepast. Dit is een hulpmiddel, geen beleggingsadvies.</div>
+      <div style="font-size:9px;color:#1A1F36;line-height:1.5">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens, waaronder trackingdifference (zelf opgezocht via trackingdifferences.com) en Morningstar Rating/sterren (zelf opgezocht via morningstar.nl). De inlegverdeling van je portefeuille wordt door deze check nooit aangepast — uitsluitend behouden/monitoren/wisselen per ETF. Dit is een hulpmiddel, geen beleggingsadvies. Controleer alle gegevens altijd zelf via officiële bronnen. Juistheid en volledigheid worden niet gegarandeerd.</div>
     </div>`;
 
-    let footerHtml = `<div style="margin-top:16px;text-align:center;font-size:9px;color:#888">claudiavoogt.nl — © ${new Date().getFullYear()} Claudia Voogt</div>`;
+    let footerHtml = `<div style="margin-top:20px;padding-top:14px;border-top:1px solid #e8e2f0;text-align:center">
+      <div style="font-size:10px;color:#555">claudiavoogt.nl — Beleggingsexpert &amp; investeringsmentor</div>
+      <div style="font-size:9px;color:#888;margin-top:4px">© ${new Date().getFullYear()} Claudia Voogt. Alle rechten voorbehouden. Deze tool mag niet worden gedeeld, gekopieerd, nagebouwd of hergebruikt zonder schriftelijke toestemming.</div>
+    </div>`;
 
     page.innerHTML += tabelHtml + disclaimerHtml + footerHtml;
     document.body.appendChild(page);
