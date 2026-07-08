@@ -566,10 +566,8 @@ function renderResultaten(data){
   document.getElementById('m-wisselen').textContent = s.wisselen;
   document.getElementById('m-nieuwweg').textContent = (s.nieuw + s.verwijderd);
 
-  // Sorteer: wisselen eerst, dan monitoren, dan behouden, dan nieuw, dan verwijderd
-  const volgorde = {wisselen:0, monitoren:1, behouden:2, nieuw:3, verwijderd:4};
-  const gesorteerd = [...data.resultaten].sort((a,b) => (volgorde[a.beslissing]??9) - (volgorde[b.beslissing]??9));
-  document.getElementById('resultaten-list').innerHTML = gesorteerd.map(resultRowHtml).join('');
+  // Zelfde volgorde als de ingevoerde ETF's, geen sortering op besluit
+  document.getElementById('resultaten-list').innerHTML = data.resultaten.map(resultRowHtml).join('');
 
   document.getElementById('output').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -661,8 +659,7 @@ async function downloadPDF(){
     metricsHtml += '</div>';
     page.innerHTML += metricsHtml;
 
-    const volgorde = {wisselen:0, monitoren:1, behouden:2, nieuw:3, verwijderd:4};
-    const gesorteerd = [...data.resultaten].sort((a,b) => (volgorde[a.beslissing]??9) - (volgorde[b.beslissing]??9));
+    const gesorteerd = data.resultaten; // zelfde volgorde als de ingevoerde ETF's, geen sortering op besluit
     const kleurPerBeslissing = {behouden:'#3edcb1', monitoren:'#FF6B35', wisselen:'#c0003a', verwijderd:'#8890b8', nieuw:'#4682DC'};
     const labelPerBeslissing = {behouden:'Behouden', monitoren:'Monitoren', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'};
 
