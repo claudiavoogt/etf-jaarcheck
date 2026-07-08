@@ -161,9 +161,10 @@ function bepaalBeslissing(opts: {
         onderBenchmark,
       };
     }
+    // Geen Analyst Rating beschikbaar (komt vaker voor bij kleinere ETF's, niet elke ETF wordt door Morningstar-analisten gevolgd)
     return {
       beslissing: 'monitoren',
-      toelichting: `Eerste jaar onder benchmark (${trackingDiff!.toFixed(2)}%), rating onbekend of niet ingevuld. Vul de Analyst Rating in en hercheck over 6 maanden.`,
+      toelichting: `Eerste jaar onder benchmark (${trackingDiff!.toFixed(2)}%). Geen Analyst Rating beschikbaar voor deze ETF op Morningstar, komt vaker voor bij kleinere ETF's. Beoordeel dit jaar zelf op basis van de sterren en trackrecord.`,
       consecutiveUnderperformanceYears,
       onderBenchmark,
     };
@@ -188,7 +189,7 @@ function bepaalBeslissing(opts: {
   }
   return {
     beslissing: 'monitoren',
-    toelichting: `Twee jaar op rij onder benchmark, rating onbekend of niet ingevuld. Vul de Analyst Rating in om een definitieve beslissing te kunnen nemen.`,
+    toelichting: `Twee jaar op rij onder benchmark (${trackingDiff!.toFixed(2)}%). Geen Analyst Rating beschikbaar voor deze ETF op Morningstar, komt vaker voor bij kleinere ETF's. Beoordeel dit jaar zelf op basis van de sterren en trackrecord.`,
     consecutiveUnderperformanceYears,
     onderBenchmark,
   };
