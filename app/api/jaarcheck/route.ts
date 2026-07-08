@@ -86,6 +86,17 @@ function ratingRang(ms?: string): number {
   return ms ? (orde[ms] ?? 2) : 2; // onbekende/lege rating: neutraal-achtig behandelen, niet automatisch wisselen
 }
 
+function ratingRangVoorRichting(ms?: string): number {
+  const orde: Record<string, number> = { Gold: 4, Silver: 3, Bronze: 2, Neutral: 1, Negative: 0 };
+  return ms && orde[ms] != null ? orde[ms] : -1; // onbekend/leeg = geen vergelijking mogelijk
+}
+function bepaalRichting(oudWaarde: number, nieuwWaarde: number): 'beter' | 'slechter' | 'gelijk' | null {
+  if (oudWaarde < 0 || nieuwWaarde < 0) return null;
+  if (nieuwWaarde > oudWaarde) return 'beter';
+  if (nieuwWaarde < oudWaarde) return 'slechter';
+  return 'gelijk';
+}
+
 function bepaalBeslissing(opts: {
   trackingDiff: number | null;
   msNieuw?: string;
@@ -276,8 +287,8 @@ export async function POST(request: NextRequest) {
           verschil: terOud != null && terNieuw != null ? +(terNieuw - terOud).toFixed(3) : null,
           gewijzigd: terOud != null && terNieuw != null && Math.abs(terNieuw - terOud) > 0.0001,
         },
-        msStars: { oud: oud.msStars || '', nieuw: msStarsNieuw, gewijzigd: (oud.msStars || '') !== msStarsNieuw },
-        ms: { oud: oud.ms || '', nieuw: msNieuw, gewijzigd: (oud.ms || '') !== msNieuw },
+        msStars: { oud: oud.msStars || '', nieuw: msStarsNieuw, gewijzigd: (oud.msStars || '') !== msStarsNieuw, richting: bepaalRichting(starCount(oud.msStars), starCount(msStarsNieuw)) },
+        ms: { oud: oud.ms || '', nieuw: msNieuw, gewijzigd: (oud.ms || '') !== msNieuw, richting: bepaalRichting(ratingRangVoorRichting(oud.ms), ratingRangVoorRichting(msNieuw)) },
         trackingDiff,
         onderBenchmark,
         consecutiveUnderperformanceYears,

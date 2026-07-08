@@ -96,6 +96,8 @@ select option{background:#1A1F36}
 .result-diffs{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--text-muted)}
 .result-diffs b{color:var(--wit)}
 .diff-changed{color:var(--oranje)!important;font-weight:700}
+.diff-beter{color:var(--mint)!important;font-weight:700}
+.diff-slechter{color:var(--fuchsia)!important;font-weight:700}
 .flags-card{background:#212645;border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
 .disclaimer{background:linear-gradient(135deg,rgba(107,45,132,0.2) 0%,rgba(226,27,112,0.1) 100%);border:1px solid rgba(107,45,132,0.4);border-radius:12px;padding:18px 22px;margin-bottom:24px}
 .disclaimer-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mint);margin-bottom:6px}
@@ -536,11 +538,12 @@ function resultRowHtml(r){
   if(r.region && (r.region.oud || r.region.nieuw)){
     diffs.push(`<span>Regio: <b class="${r.region.gewijzigd?'diff-changed':''}">${r.region.oud||'—'} → ${r.region.nieuw||'—'}</b></span>`);
   }
+  const richtingClass = (r) => r === 'beter' ? 'diff-beter' : r === 'slechter' ? 'diff-slechter' : '';
   if(r.msStars && (r.msStars.oud || r.msStars.nieuw)){
-    diffs.push(`<span>Sterren: <b class="${r.msStars.gewijzigd?'diff-changed':''}">${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}</b></span>`);
+    diffs.push(`<span>Sterren: <b class="${richtingClass(r.msStars.richting)}">${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}</b></span>`);
   }
   if(r.ms && (r.ms.oud || r.ms.nieuw)){
-    diffs.push(`<span>Rating: <b class="${r.ms.gewijzigd?'diff-changed':''}">${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}</b></span>`);
+    diffs.push(`<span>Rating: <b class="${richtingClass(r.ms.richting)}">${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}</b></span>`);
   }
   if(r.trackingDiff != null){
     diffs.push(`<span>Trackingdifference: <b>${r.trackingDiff.toFixed(2)}%</b></span>`);
@@ -671,8 +674,9 @@ async function downloadPDF(){
       if(r.ter && r.ter.oud != null && r.ter.nieuw != null) diffPartsPdf.push(`TER: ${fmtTer(r.ter.oud)} → ${fmtTer(r.ter.nieuw)}`);
       if(r.sector && (r.sector.oud || r.sector.nieuw)) diffPartsPdf.push(`Sector: ${r.sector.oud||'—'} → ${r.sector.nieuw||'—'}`);
       if(r.region && (r.region.oud || r.region.nieuw)) diffPartsPdf.push(`Regio: ${r.region.oud||'—'} → ${r.region.nieuw||'—'}`);
-      if(r.msStars && (r.msStars.oud || r.msStars.nieuw)) diffPartsPdf.push(`Sterren: ${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}`);
-      if(r.ms && (r.ms.oud || r.ms.nieuw)) diffPartsPdf.push(`Rating: ${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}`);
+      const richtingKleurPdf = (r) => r === 'beter' ? '#0a8c5e' : r === 'slechter' ? '#c0003a' : '#1A1F36';
+      if(r.msStars && (r.msStars.oud || r.msStars.nieuw)) diffPartsPdf.push(`Sterren: <span style="color:${richtingKleurPdf(r.msStars.richting)};font-weight:700">${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}</span>`);
+      if(r.ms && (r.ms.oud || r.ms.nieuw)) diffPartsPdf.push(`Rating: <span style="color:${richtingKleurPdf(r.ms.richting)};font-weight:700">${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}</span>`);
       if(r.trackingDiff != null) diffPartsPdf.push(`Trackingdifference: ${r.trackingDiff.toFixed(2)}%`);
       const diffsHtmlPdf = diffPartsPdf.length ? `<div style="font-size:9px;color:#555;margin-top:6px">${diffPartsPdf.join(' &nbsp;·&nbsp; ')}</div>` : '';
       tabelHtml += `<div style="border-left:3px solid ${kleur};background:#f9f8fc;border-radius:6px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid">
