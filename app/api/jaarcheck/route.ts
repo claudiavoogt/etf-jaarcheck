@@ -15,7 +15,10 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  * Kernregel (nooit wijzigen zonder Claudia's expliciete akkoord):
  * - Analyst Rating Negative => altijd direct wisselen, ongeacht trackrecord.
- * - Fondsvolume onder de minimale grens (€500 mln) => altijd direct wisselen, ongeacht trackrecord of rating.
+ * - Fondsvolume onder de minimale grens (€500 mln), 1e keer geconstateerd => NIET direct wisselen.
+ *   Altijd minimaal "monitoren", hercheck over 6 maanden, ongeacht de rating.
+ * - Fondsvolume nog steeds onder de minimale grens bij de eérstvolgende jaarcheck erna (2 keer op rij)
+ *   => dan pas wisselen, ongeacht rating of trackrecord — het fonds is niet hersteld na de waarschuwing.
  * - Onderperformance alleen (1 jaar) is nooit een wisselreden zolang rating Bronze of hoger is.
  * - Wisselen alleen bij: rating Neutral + 2 jaar op rij onderperformance (afwijking >= 1.5%).
  * - Eerste jaar onderperformance + Neutral => monitoren, hercheck na 6 maanden, nog niet wisselen.
@@ -28,7 +31,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const ONDERPERFORMANCE_DREMPEL = 1.5; // % — positieve trackingdifference boven deze drempel telt als "onder benchmark"
-const MINIMALE_FONDSOMVANG = 500; // miljoen euro — harde ondergrens, eronder is fondsvolume altijd een wisselreden
+const MINIMALE_FONDSOMVANG = 500; // miljoen euro — 1e keer eronder = monitoren (hercheck 6 mnd), 2e jaar op rij eronder = wisselen
 
 type OudETF = {
   id: string;
@@ -45,6 +48,7 @@ type OudETF = {
   // Alleen aanwezig als de oude JSON zelf een Jaarcheck-export was (chaining, jaar 2+):
   consecutiveUnderperformanceYears?: number;
   dalendeSterrenJaren?: number;
+  fondsvolumeOnderMinimumJaren?: number;
   trackingDiff?: number | null;
 };
 
@@ -110,11 +114,22 @@ function bepaalBeslissing(opts: {
   msStarsNieuw?: string;
   priorConsecutive: number;
   fondsvolumeNieuw?: number | null;
-}): { beslissing: string; toelichting: string; consecutiveUnderperformanceYears: number; onderBenchmark: boolean } {
-  const { trackingDiff, msNieuw, msStarsNieuw, priorConsecutive, fondsvolumeNieuw } = opts;
+  priorFondsvolumeOnderMinimumJaren?: number;
+}): {
+  beslissing: string;
+  toelichting: string;
+  consecutiveUnderperformanceYears: number;
+  onderBenchmark: boolean;
+  fondsvolumeOnderMinimumJaren: number;
+  fondsvolumeIsHoofdreden: boolean;
+} {
+  const { trackingDiff, msNieuw, msStarsNieuw, priorConsecutive, fondsvolumeNieuw, priorFondsvolumeOnderMinimumJaren } = opts;
   const onderBenchmark = trackingDiff != null && trackingDiff > ONDERPERFORMANCE_DREMPEL;
   const consecutiveUnderperformanceYears = onderBenchmark ? priorConsecutive + 1 : 0;
   const sterren = starCount(msStarsNieuw);
+
+  const fondsvolumeOnderMinimum = fondsvolumeNieuw != null && fondsvolumeNieuw < MINIMALE_FONDSOMVANG;
+  const fondsvolumeOnderMinimumJaren = fondsvolumeOnderMinimum ? (priorFondsvolumeOnderMinimumJaren || 0) + 1 : 0;
 
   // Kernregel: Negative = altijd direct wisselen, ongeacht trackrecord.
   if (msNieuw === 'Negative') {
@@ -123,16 +138,20 @@ function bepaalBeslissing(opts: {
       toelichting: 'Analyst Rating is Negative — directe wisselgrond, ongeacht trackrecord of aantal jaren.',
       consecutiveUnderperformanceYears,
       onderBenchmark,
+      fondsvolumeOnderMinimumJaren,
+      fondsvolumeIsHoofdreden: false,
     };
   }
 
-  // Kernregel: fondsvolume onder de minimale grens = altijd direct wisselen, ongeacht trackrecord of rating.
-  if (fondsvolumeNieuw != null && fondsvolumeNieuw < MINIMALE_FONDSOMVANG) {
+  // Kernregel: fondsvolume zit al voor de tweede keer op rij onder de minimale grens — niet hersteld na de waarschuwing.
+  if (fondsvolumeOnderMinimumJaren >= 2) {
     return {
       beslissing: 'wisselen',
-      toelichting: `Fondsvolume (€${fondsvolumeNieuw} mln) zit onder de minimale grens van €${MINIMALE_FONDSOMVANG} mln — directe wisselgrond, ongeacht trackrecord of rating. Risico op liquidatie of samenvoeging van het fonds.`,
+      toelichting: `Fondsvolume zit voor het tweede jaar op rij onder de minimale grens van €${MINIMALE_FONDSOMVANG} mln (nu €${fondsvolumeNieuw} mln) — vorig jaar al gewaarschuwd, het fonds is niet hersteld. Wissel, ongeacht rating of trackrecord.`,
       consecutiveUnderperformanceYears,
       onderBenchmark,
+      fondsvolumeOnderMinimumJaren,
+      fondsvolumeIsHoofdreden: true,
     };
   }
 
@@ -143,73 +162,84 @@ function bepaalBeslissing(opts: {
       toelichting: `Combinatie van lage Morningstar-sterren (${msStarsNieuw}) en Neutral rating — direct wisselen, ongeacht trackrecord.`,
       consecutiveUnderperformanceYears,
       onderBenchmark,
+      fondsvolumeOnderMinimumJaren,
+      fondsvolumeIsHoofdreden: false,
     };
   }
 
+  // Vanaf hier: "basis"-beslissing op trackingdifference/rating, zoals voorheen.
+  let basis: { beslissing: string; toelichting: string };
+
   if (!onderBenchmark) {
-    return {
+    basis = {
       beslissing: 'behouden',
       toelichting:
         trackingDiff != null
           ? `Presteert boven of rond benchmark (trackingdifference ${trackingDiff.toFixed(2)}%), rating in orde. Geen actie.`
           : 'Geen trackingdifference ingevuld — geen benchmarksignaal, rating in orde. Geen actie.',
-      consecutiveUnderperformanceYears,
-      onderBenchmark,
     };
+  } else {
+    // Onder benchmark (trackingdifference > 1.5%)
+    const ratingVoldoende = ratingRang(msNieuw) >= 3; // Gold/Silver/Bronze
+    const ratingNeutral = msNieuw === 'Neutral';
+
+    if (consecutiveUnderperformanceYears === 1) {
+      if (ratingVoldoende) {
+        basis = {
+          beslissing: 'behouden',
+          toelichting: `Eerste jaar onder benchmark (trackingdifference ${trackingDiff!.toFixed(2)}%), rating ${msNieuw} nog voldoende. Noteer en volg volgend jaar — een slecht jaar is normaal.`,
+        };
+      } else if (ratingNeutral) {
+        basis = {
+          beslissing: 'monitoren',
+          toelichting: `Eerste jaar onder benchmark (${trackingDiff!.toFixed(2)}%) + Neutral rating: vroeg signaal. Verhoog monitoring, hercheck over 6 maanden. Nog niet wisselen.`,
+        };
+      } else {
+        // Geen Analyst Rating beschikbaar (komt vaker voor bij kleinere ETF's, niet elke ETF wordt door Morningstar-analisten gevolgd)
+        basis = {
+          beslissing: 'monitoren',
+          toelichting: `Eerste jaar onder benchmark (${trackingDiff!.toFixed(2)}%). Geen Analyst Rating beschikbaar voor deze ETF op Morningstar, komt vaker voor bij kleinere ETF's. Beoordeel dit jaar zelf op basis van de sterren en trackrecord.`,
+        };
+      }
+    } else {
+      // consecutiveUnderperformanceYears >= 2: twee (of meer) jaar op rij onder benchmark
+      if (ratingVoldoende) {
+        basis = {
+          beslissing: 'behouden',
+          toelichting: `Twee jaar op rij onder benchmark, maar rating ${msNieuw} blijft solide — Morningstar-analisten beoordelen de structurele kwaliteit. Vertrouw op die check.`,
+        };
+      } else if (ratingNeutral) {
+        basis = {
+          beslissing: 'wisselen',
+          toelichting: `Twee jaar op rij onder benchmark + Neutral rating: combinatie van aanhoudende underperformance en Neutral betekent geen vertrouwen meer. Wissel.`,
+        };
+      } else {
+        basis = {
+          beslissing: 'monitoren',
+          toelichting: `Twee jaar op rij onder benchmark (${trackingDiff!.toFixed(2)}%). Geen Analyst Rating beschikbaar voor deze ETF op Morningstar, komt vaker voor bij kleinere ETF's. Beoordeel dit jaar zelf op basis van de sterren en trackrecord.`,
+        };
+      }
+    }
   }
 
-  // Vanaf hier: onder benchmark (trackingdifference > 1.5%)
-  const ratingVoldoende = ratingRang(msNieuw) >= 3; // Gold/Silver/Bronze
-  const ratingNeutral = msNieuw === 'Neutral';
-
-  if (consecutiveUnderperformanceYears === 1) {
-    if (ratingVoldoende) {
-      return {
-        beslissing: 'behouden',
-        toelichting: `Eerste jaar onder benchmark (trackingdifference ${trackingDiff!.toFixed(2)}%), rating ${msNieuw} nog voldoende. Noteer en volg volgend jaar — een slecht jaar is normaal.`,
-        consecutiveUnderperformanceYears,
-        onderBenchmark,
-      };
-    }
-    if (ratingNeutral) {
-      return {
-        beslissing: 'monitoren',
-        toelichting: `Eerste jaar onder benchmark (${trackingDiff!.toFixed(2)}%) + Neutral rating: vroeg signaal. Verhoog monitoring, hercheck over 6 maanden. Nog niet wisselen.`,
-        consecutiveUnderperformanceYears,
-        onderBenchmark,
-      };
-    }
-    // Geen Analyst Rating beschikbaar (komt vaker voor bij kleinere ETF's, niet elke ETF wordt door Morningstar-analisten gevolgd)
-    return {
+  // Fondsvolume 1e keer onder de minimale grens: nooit een reden om automatisch te wisselen, maar wél
+  // minimaal "monitoren" — als de basisbeslissing nog "behouden" was, wordt die opgetild naar "monitoren".
+  let fondsvolumeIsHoofdreden = false;
+  if (fondsvolumeOnderMinimumJaren === 1 && basis.beslissing === 'behouden') {
+    const ratingNote = ratingRang(msNieuw) >= 3 ? `, rating ${msNieuw || '(onbekend)'} nog voldoende` : '';
+    basis = {
       beslissing: 'monitoren',
-      toelichting: `Eerste jaar onder benchmark (${trackingDiff!.toFixed(2)}%). Geen Analyst Rating beschikbaar voor deze ETF op Morningstar, komt vaker voor bij kleinere ETF's. Beoordeel dit jaar zelf op basis van de sterren en trackrecord.`,
-      consecutiveUnderperformanceYears,
-      onderBenchmark,
+      toelichting: `Fondsvolume is onder de minimale grens van €${MINIMALE_FONDSOMVANG} mln gezakt (nu €${fondsvolumeNieuw} mln)${ratingNote}. Hercheck over 6 maanden — blijft het fonds klein bij de volgende jaarcheck, dan wisselen.`,
     };
+    fondsvolumeIsHoofdreden = true;
   }
 
-  // consecutiveUnderperformanceYears >= 2: twee (of meer) jaar op rij onder benchmark
-  if (ratingVoldoende) {
-    return {
-      beslissing: 'behouden',
-      toelichting: `Twee jaar op rij onder benchmark, maar rating ${msNieuw} blijft solide — Morningstar-analisten beoordelen de structurele kwaliteit. Vertrouw op die check.`,
-      consecutiveUnderperformanceYears,
-      onderBenchmark,
-    };
-  }
-  if (ratingNeutral) {
-    return {
-      beslissing: 'wisselen',
-      toelichting: `Twee jaar op rij onder benchmark + Neutral rating: combinatie van aanhoudende underperformance en Neutral betekent geen vertrouwen meer. Wissel.`,
-      consecutiveUnderperformanceYears,
-      onderBenchmark,
-    };
-  }
   return {
-    beslissing: 'monitoren',
-    toelichting: `Twee jaar op rij onder benchmark (${trackingDiff!.toFixed(2)}%). Geen Analyst Rating beschikbaar voor deze ETF op Morningstar, komt vaker voor bij kleinere ETF's. Beoordeel dit jaar zelf op basis van de sterren en trackrecord.`,
+    ...basis,
     consecutiveUnderperformanceYears,
     onderBenchmark,
+    fondsvolumeOnderMinimumJaren,
+    fondsvolumeIsHoofdreden,
   };
 }
 
@@ -260,6 +290,7 @@ export async function POST(request: NextRequest) {
           onderBenchmark: false,
           consecutiveUnderperformanceYears: 0,
           dalendeSterrenJaren: 0,
+          fondsvolumeOnderMinimumJaren: 0,
           sterrenDalend2JaarOpRij: false,
         });
         continue;
@@ -267,30 +298,34 @@ export async function POST(request: NextRequest) {
 
       const priorConsecutive = bronIsJaarcheck ? (oud.consecutiveUnderperformanceYears || 0) : 0;
       const priorSterrenDalend = bronIsJaarcheck ? (oud.dalendeSterrenJaren || 0) : 0;
+      const priorFondsvolumeOnderMinimumJaren = bronIsJaarcheck ? (oud.fondsvolumeOnderMinimumJaren || 0) : 0;
 
       const fondsvolumeOud = oud.fondsvolume ?? null;
       const fondsvolumeNieuw = n.fondsvolume ?? null;
 
       const trackingDiff = n.trackingDiff != null && !isNaN(n.trackingDiff) ? n.trackingDiff : null;
-      const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark } = bepaalBeslissing({
+      const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark, fondsvolumeOnderMinimumJaren, fondsvolumeIsHoofdreden } = bepaalBeslissing({
         trackingDiff,
         msNieuw: n.ms,
         msStarsNieuw: n.msStars,
         priorConsecutive,
         fondsvolumeNieuw,
+        priorFondsvolumeOnderMinimumJaren,
       });
 
       const sterrenGedaald = starCount(n.msStars) > 0 && starCount(oud.msStars) > 0 && starCount(n.msStars) < starCount(oud.msStars);
       const dalendeSterrenJaren = sterrenGedaald ? priorSterrenDalend + 1 : 0;
       const sterrenDalend2JaarOpRij = dalendeSterrenJaren >= 2;
 
-      // Fondsvolume-trend: alleen een apart signaal als het nog boven de minimale grens zit
-      // (zit het eronder, dan is dat al de hoofdreden voor "wisselen" via bepaalBeslissing hierboven).
       const fondsvolumeOnderMinimum = fondsvolumeNieuw != null && fondsvolumeNieuw < MINIMALE_FONDSOMVANG;
       const fondsvolumeGedaald = fondsvolumeOud != null && fondsvolumeNieuw != null && fondsvolumeNieuw < fondsvolumeOud;
-      const fondsvolumeSignaal = (fondsvolumeGedaald && !fondsvolumeOnderMinimum)
-        ? `Fondsvolume loopt terug (€${fondsvolumeOud} mln → €${fondsvolumeNieuw} mln). Nog boven de minimale grens van €${MINIMALE_FONDSOMVANG} mln, maar wel een aandachtspunt om te volgen.`
-        : null;
+      // Signaal-tekst: alleen tonen als het al niet de hoofdreden van de beslissing zelf is
+      // (anders staat het al, uitgebreider, in de toelichting hierboven).
+      const fondsvolumeSignaal = (fondsvolumeOnderMinimumJaren === 1 && !fondsvolumeIsHoofdreden)
+        ? `Fondsvolume zit ook onder de minimale grens van €${MINIMALE_FONDSOMVANG} mln (nu €${fondsvolumeNieuw} mln). Hercheck over 6 maanden — blijft het zo, dan volgend jaar wisselen.`
+        : (fondsvolumeGedaald && !fondsvolumeOnderMinimum)
+          ? `Fondsvolume loopt terug (€${fondsvolumeOud} mln → €${fondsvolumeNieuw} mln). Nog boven de minimale grens van €${MINIMALE_FONDSOMVANG} mln, maar wel een aandachtspunt om te volgen.`
+          : null;
 
       if (beslissing === 'behouden') behouden++;
       else if (beslissing === 'monitoren') monitoren++;
@@ -334,6 +369,7 @@ export async function POST(request: NextRequest) {
         onderBenchmark,
         consecutiveUnderperformanceYears,
         dalendeSterrenJaren,
+        fondsvolumeOnderMinimumJaren,
         sterrenDalend2JaarOpRij,
       });
     }
@@ -347,12 +383,13 @@ export async function POST(request: NextRequest) {
 
       const fondsvolumeNieuw = n.fondsvolume ?? null;
       const trackingDiff = n.trackingDiff != null && !isNaN(n.trackingDiff) ? n.trackingDiff : null;
-      const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark } = bepaalBeslissing({
+      const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark, fondsvolumeOnderMinimumJaren } = bepaalBeslissing({
         trackingDiff,
         msNieuw: n.ms,
         msStarsNieuw: n.msStars,
         priorConsecutive: 0,
         fondsvolumeNieuw,
+        priorFondsvolumeOnderMinimumJaren: 0,
       });
 
       if (beslissing === 'behouden') behouden++;
@@ -377,6 +414,7 @@ export async function POST(request: NextRequest) {
         onderBenchmark,
         consecutiveUnderperformanceYears,
         dalendeSterrenJaren: 0,
+        fondsvolumeOnderMinimumJaren,
         sterrenDalend2JaarOpRij: false,
       });
     }
