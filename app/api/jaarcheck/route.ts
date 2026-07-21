@@ -8,22 +8,27 @@ import { NextRequest, NextResponse } from 'next/server';
  *  - Benchmarkprestatie (trackingdifference, handmatig opgezocht door de klant op trackingdifferences.com)
  *  - Morningstar Analyst Rating (Gold/Silver/Bronze/Neutral/Negative)
  *  - Trend in Morningstar sterren (dalend, 2 jaar op rij = signaal)
+ *  - Fondsvolume (in miljoen euro): harde ondergrens + trend t.o.v. vorig jaar
  *
  * KRITIEK — zelfde discipline als analyseer.ts: deze beslislogica leeft UITSLUITEND server-side.
  * Nooit deze functie of een kopie ervan teruginzetten in de HTML.
  *
  * Kernregel (nooit wijzigen zonder Claudia's expliciete akkoord):
  * - Analyst Rating Negative => altijd direct wisselen, ongeacht trackrecord.
+ * - Fondsvolume onder de minimale grens (€500 mln) => altijd direct wisselen, ongeacht trackrecord of rating.
  * - Onderperformance alleen (1 jaar) is nooit een wisselreden zolang rating Bronze of hoger is.
  * - Wisselen alleen bij: rating Neutral + 2 jaar op rij onderperformance (afwijking >= 1.5%).
  * - Eerste jaar onderperformance + Neutral => monitoren, hercheck na 6 maanden, nog niet wisselen.
  * - Sterren-trend (dalend 2 jaar op rij) is een signaal/waarschuwing, geen zelfstandige wisselreden.
+ * - Teruglopend fondsvolume t.o.v. vorig jaar (maar nog boven de minimale grens) is een signaal/waarschuwing,
+ *   geen zelfstandige wisselreden — puur "in de gaten houden".
  * - UITZONDERING: MS Sterren <= 2 EN Analyst Rating Neutral => altijd direct wisselen, ongeacht trackingdifference of aantal jaren.
  *   Zelfde combinatie-logica als de hoofdtool's vlaglogica (lage sterren + Neutral = geen vertrouwen meer).
  * - De inlegverdeling/weging wordt NOOIT aangepast op basis van deze check — puur behouden/wisselen per ETF.
  */
 
 const ONDERPERFORMANCE_DREMPEL = 1.5; // % — positieve trackingdifference boven deze drempel telt als "onder benchmark"
+const MINIMALE_FONDSOMVANG = 500; // miljoen euro — harde ondergrens, eronder is fondsvolume altijd een wisselreden
 
 type OudETF = {
   id: string;
@@ -36,6 +41,7 @@ type OudETF = {
   div?: string;
   msStars?: string;
   ms?: string;
+  fondsvolume?: number | null;
   // Alleen aanwezig als de oude JSON zelf een Jaarcheck-export was (chaining, jaar 2+):
   consecutiveUnderperformanceYears?: number;
   dalendeSterrenJaren?: number;
@@ -52,6 +58,7 @@ type NieuwETF = {
   sector?: string;
   region?: string;
   div?: string;
+  fondsvolume?: number | null;
   verwijderd?: boolean;
 };
 
@@ -102,8 +109,9 @@ function bepaalBeslissing(opts: {
   msNieuw?: string;
   msStarsNieuw?: string;
   priorConsecutive: number;
+  fondsvolumeNieuw?: number | null;
 }): { beslissing: string; toelichting: string; consecutiveUnderperformanceYears: number; onderBenchmark: boolean } {
-  const { trackingDiff, msNieuw, msStarsNieuw, priorConsecutive } = opts;
+  const { trackingDiff, msNieuw, msStarsNieuw, priorConsecutive, fondsvolumeNieuw } = opts;
   const onderBenchmark = trackingDiff != null && trackingDiff > ONDERPERFORMANCE_DREMPEL;
   const consecutiveUnderperformanceYears = onderBenchmark ? priorConsecutive + 1 : 0;
   const sterren = starCount(msStarsNieuw);
@@ -113,6 +121,16 @@ function bepaalBeslissing(opts: {
     return {
       beslissing: 'wisselen',
       toelichting: 'Analyst Rating is Negative — directe wisselgrond, ongeacht trackrecord of aantal jaren.',
+      consecutiveUnderperformanceYears,
+      onderBenchmark,
+    };
+  }
+
+  // Kernregel: fondsvolume onder de minimale grens = altijd direct wisselen, ongeacht trackrecord of rating.
+  if (fondsvolumeNieuw != null && fondsvolumeNieuw < MINIMALE_FONDSOMVANG) {
+    return {
+      beslissing: 'wisselen',
+      toelichting: `Fondsvolume (€${fondsvolumeNieuw} mln) zit onder de minimale grens van €${MINIMALE_FONDSOMVANG} mln — directe wisselgrond, ongeacht trackrecord of rating. Risico op liquidatie of samenvoeging van het fonds.`,
       consecutiveUnderperformanceYears,
       onderBenchmark,
     };
@@ -231,11 +249,13 @@ export async function POST(request: NextRequest) {
           beslissing: 'verwijderd',
           toelichting: 'Niet meer aanwezig in de nieuwe situatie — uit de portefeuille gehaald sinds de vorige check.',
           sterrenSignaal: null,
+          fondsvolumeSignaal: null,
           sector: { oud: oud.sector || '', nieuw: null, gewijzigd: false },
           region: { oud: oud.region || '', nieuw: null, gewijzigd: false },
           ter: { oud: oud.ter ?? null, nieuw: null, verschil: null, gewijzigd: false },
           msStars: { oud: oud.msStars || '', nieuw: null, gewijzigd: false },
           ms: { oud: oud.ms || '', nieuw: null, gewijzigd: false },
+          fondsvolume: { oud: oud.fondsvolume ?? null, nieuw: null, gewijzigd: false, gedaald: false, onderMinimum: false },
           trackingDiff: null,
           onderBenchmark: false,
           consecutiveUnderperformanceYears: 0,
@@ -248,17 +268,29 @@ export async function POST(request: NextRequest) {
       const priorConsecutive = bronIsJaarcheck ? (oud.consecutiveUnderperformanceYears || 0) : 0;
       const priorSterrenDalend = bronIsJaarcheck ? (oud.dalendeSterrenJaren || 0) : 0;
 
+      const fondsvolumeOud = oud.fondsvolume ?? null;
+      const fondsvolumeNieuw = n.fondsvolume ?? null;
+
       const trackingDiff = n.trackingDiff != null && !isNaN(n.trackingDiff) ? n.trackingDiff : null;
       const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark } = bepaalBeslissing({
         trackingDiff,
         msNieuw: n.ms,
         msStarsNieuw: n.msStars,
         priorConsecutive,
+        fondsvolumeNieuw,
       });
 
       const sterrenGedaald = starCount(n.msStars) > 0 && starCount(oud.msStars) > 0 && starCount(n.msStars) < starCount(oud.msStars);
       const dalendeSterrenJaren = sterrenGedaald ? priorSterrenDalend + 1 : 0;
       const sterrenDalend2JaarOpRij = dalendeSterrenJaren >= 2;
+
+      // Fondsvolume-trend: alleen een apart signaal als het nog boven de minimale grens zit
+      // (zit het eronder, dan is dat al de hoofdreden voor "wisselen" via bepaalBeslissing hierboven).
+      const fondsvolumeOnderMinimum = fondsvolumeNieuw != null && fondsvolumeNieuw < MINIMALE_FONDSOMVANG;
+      const fondsvolumeGedaald = fondsvolumeOud != null && fondsvolumeNieuw != null && fondsvolumeNieuw < fondsvolumeOud;
+      const fondsvolumeSignaal = (fondsvolumeGedaald && !fondsvolumeOnderMinimum)
+        ? `Fondsvolume loopt terug (€${fondsvolumeOud} mln → €${fondsvolumeNieuw} mln). Nog boven de minimale grens van €${MINIMALE_FONDSOMVANG} mln, maar wel een aandachtspunt om te volgen.`
+        : null;
 
       if (beslissing === 'behouden') behouden++;
       else if (beslissing === 'monitoren') monitoren++;
@@ -280,6 +312,7 @@ export async function POST(request: NextRequest) {
         sterrenSignaal: sterrenDalend2JaarOpRij
           ? `Morningstar-sterren dalen twee jaar op rij (${oud.msStars || '—'} → ${msStarsNieuw || '—'}). Extra aandachtspunt naast de hoofdbeslissing.`
           : null,
+        fondsvolumeSignaal,
         sector: { oud: oud.sector || '', nieuw: sectorNieuw, gewijzigd: (oud.sector || '') !== sectorNieuw },
         region: { oud: oud.region || '', nieuw: regionNieuw, gewijzigd: (oud.region || '') !== regionNieuw },
         ter: {
@@ -290,6 +323,13 @@ export async function POST(request: NextRequest) {
         },
         msStars: { oud: oud.msStars || '', nieuw: msStarsNieuw, gewijzigd: (oud.msStars || '') !== msStarsNieuw, richting: bepaalRichting(starCount(oud.msStars), starCount(msStarsNieuw)) },
         ms: { oud: oud.ms || '', nieuw: msNieuw, gewijzigd: (oud.ms || '') !== msNieuw, richting: bepaalRichting(ratingRangVoorRichting(oud.ms), ratingRangVoorRichting(msNieuw)) },
+        fondsvolume: {
+          oud: fondsvolumeOud,
+          nieuw: fondsvolumeNieuw,
+          gewijzigd: fondsvolumeOud != null && fondsvolumeNieuw != null && fondsvolumeOud !== fondsvolumeNieuw,
+          gedaald: fondsvolumeGedaald,
+          onderMinimum: fondsvolumeOnderMinimum,
+        },
         trackingDiff,
         onderBenchmark,
         consecutiveUnderperformanceYears,
@@ -305,12 +345,14 @@ export async function POST(request: NextRequest) {
       if (key && vorigMap.has(key)) continue; // al hierboven verwerkt
       nieuwCount++;
 
+      const fondsvolumeNieuw = n.fondsvolume ?? null;
       const trackingDiff = n.trackingDiff != null && !isNaN(n.trackingDiff) ? n.trackingDiff : null;
       const { beslissing, toelichting, consecutiveUnderperformanceYears, onderBenchmark } = bepaalBeslissing({
         trackingDiff,
         msNieuw: n.ms,
         msStarsNieuw: n.msStars,
         priorConsecutive: 0,
+        fondsvolumeNieuw,
       });
 
       if (beslissing === 'behouden') behouden++;
@@ -324,11 +366,13 @@ export async function POST(request: NextRequest) {
         beslissing,
         toelichting: `Nieuw toegevoegd sinds de vorige check — geen historie. ${toelichting}`,
         sterrenSignaal: null,
+        fondsvolumeSignaal: null,
         sector: { oud: null, nieuw: n.sector || '', gewijzigd: false },
         region: { oud: null, nieuw: n.region || '', gewijzigd: false },
         ter: { oud: null, nieuw: n.ter ?? null, verschil: null, gewijzigd: false },
         msStars: { oud: null, nieuw: n.msStars || '', gewijzigd: false },
         ms: { oud: null, nieuw: n.ms || '', gewijzigd: false },
+        fondsvolume: { oud: null, nieuw: fondsvolumeNieuw, gewijzigd: false, gedaald: false, onderMinimum: fondsvolumeNieuw != null && fondsvolumeNieuw < MINIMALE_FONDSOMVANG },
         trackingDiff,
         onderBenchmark,
         consecutiveUnderperformanceYears,

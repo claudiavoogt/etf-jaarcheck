@@ -10,6 +10,7 @@
 :root{
   --paars:#6B2D84;
   --fuchsia:#E21B70;
+  --felroze:#FF4FA3;
   --navy:#1A1F36;
   --mint:#3EDCB1;
   --oranje:#FF6B35;
@@ -51,6 +52,8 @@ body{font-family:'Lora',serif;background:var(--navy);color:var(--wit);min-height
 .row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;margin-top:12px}
 .row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;margin-top:12px}
+.row5{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end;margin-top:12px}
+.vorig-jaar{color:var(--felroze)!important;font-weight:700}
 label{font-family:'Montserrat',sans-serif;font-weight:400;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:#aab0cc;display:block;margin-bottom:6px}
 label span{font-weight:400;text-transform:none;letter-spacing:0}
 input,select{width:100%;background:#161930;border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:14px;font-family:'Lora',serif;color:var(--wit);outline:none;transition:border-color .2s}
@@ -98,6 +101,8 @@ select option{background:#1A1F36}
 .diff-changed{color:var(--oranje)!important;font-weight:700}
 .diff-beter{color:var(--mint)!important;font-weight:700}
 .diff-slechter{color:var(--fuchsia)!important;font-weight:700}
+.diff-onder-minimum{color:var(--fuchsia)!important;font-weight:800}
+.result-signaal.fondsvolume{color:var(--felroze)}
 .flags-card{background:#212645;border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
 .disclaimer{background:linear-gradient(135deg,rgba(107,45,132,0.2) 0%,rgba(226,27,112,0.1) 100%);border:1px solid rgba(107,45,132,0.4);border-radius:12px;padding:18px 22px;margin-bottom:24px}
 .disclaimer-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mint);margin-bottom:6px}
@@ -117,7 +122,7 @@ select option{background:#1A1F36}
 .checkbox-row label{margin:0;font-size:11px}
 @media(max-width:720px){
   .metrics{grid-template-columns:repeat(3,1fr)}
-  .row2,.row3,.row4{grid-template-columns:1fr 1fr}
+  .row2,.row3,.row4,.row5{grid-template-columns:1fr 1fr}
   .header-inner{padding:18px 20px}
   .container{padding:20px 16px}
 }
@@ -176,7 +181,7 @@ select option{background:#1A1F36}
 
     <div class="disclaimer">
       <div class="disclaimer-title">Belangrijk</div>
-      <div class="disclaimer-text">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens, waaronder trackingdifference (zelf opgezocht via trackingdifferences.com) en Morningstar Rating/sterren (zelf opgezocht via morningstar.nl). De inlegverdeling van je portefeuille wordt door deze check nooit aangepast — uitsluitend behouden/monitoren/wisselen per ETF. Dit is een hulpmiddel, geen beleggingsadvies. Controleer alle gegevens altijd zelf via officiële bronnen. Juistheid en volledigheid worden niet gegarandeerd.</div>
+      <div class="disclaimer-text">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens, waaronder trackingdifference (zelf opgezocht via trackingdifferences.com), Morningstar Rating/sterren en fondsvolume (beide zelf opgezocht via morningstar.nl). De inlegverdeling van je portefeuille wordt door deze check nooit aangepast — uitsluitend behouden/monitoren/wisselen per ETF. Dit is een hulpmiddel, geen beleggingsadvies. Controleer alle gegevens altijd zelf via officiële bronnen. Juistheid en volledigheid worden niet gegarandeerd.</div>
     </div>
 
     <div class="actions">
@@ -353,8 +358,8 @@ function bestaandRowHtml(etf){
         <label for="${id}-verwijderd">Niet meer in portefeuille</label>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Vorig jaar: ${etf.sector||'—'} · ${etf.region||'—'} · TER ${etf.ter!=null?etf.ter.toFixed(2)+'%':'—'} · MS ${etf.msStars||'—'} ${etf.ms||''}</div>
-    <div class="row4" id="${id}-fields">
+    <div style="font-size:11px;margin-bottom:10px" class="vorig-jaar">Vorig jaar: ${etf.sector||'—'} · ${etf.region||'—'} · TER ${etf.ter!=null?etf.ter.toFixed(2)+'%':'—'} · MS ${etf.msStars||'—'} ${etf.ms||''} · Fondsvolume ${etf.fondsvolume!=null?'€'+etf.fondsvolume+' mln':'—'}</div>
+    <div class="row5" id="${id}-fields">
       <div>
         <label>Trackingdifference dit jaar <span>(%)</span></label>
         <div style="display:flex;gap:6px">
@@ -376,6 +381,10 @@ function bestaandRowHtml(etf){
           <input type="number" id="${id}-ter" value="${etf.ter!=null?etf.ter:''}" step="0.01" style="flex:1">
           <button class="btn btn-sm" type="button" onclick="herzoekISIN('${id}')" title="Opnieuw opzoeken via ISIN">🔍</button>
         </div>
+      </div>
+      <div>
+        <label>Fondsvolume nu <span>(€ mln)</span></label>
+        <input type="number" id="${id}-fondsvolume" placeholder="bijv. 850" step="1" min="0">
       </div>
     </div>
     <input type="hidden" id="${id}-isin" value="${(etf.isin||'').replace(/"/g,'&quot;')}">
@@ -412,7 +421,7 @@ function nieuwRowHtml(id, n){
         <input type="number" id="${id}-ter" placeholder="0.20" step="0.01">
       </div>
     </div>
-    <div class="row3">
+    <div class="row4">
       <div>
         <label>Trackingdifference <span>(%)</span></label>
         <div style="display:flex;gap:6px">
@@ -427,6 +436,10 @@ function nieuwRowHtml(id, n){
       <div>
         <label>Analyst Rating</label>
         <select id="${id}-ms">${ratingOptions('')}</select>
+      </div>
+      <div>
+        <label>Fondsvolume <span>(€ mln)</span></label>
+        <input type="number" id="${id}-fondsvolume" placeholder="bijv. 850" step="1" min="0">
       </div>
     </div>
     <input type="hidden" id="${id}-sector" value="">
@@ -466,6 +479,7 @@ function getNieuweSituatie(){
       msStars: verwijderd ? '' : (document.getElementById(id+'-stars').value || ''),
       ms: verwijderd ? '' : (document.getElementById(id+'-ms').value || ''),
       ter: verwijderd ? null : (parseFloat(document.getElementById(id+'-ter').value) || null),
+      fondsvolume: verwijderd ? null : (parseFloat(document.getElementById(id+'-fondsvolume').value) || null),
       sector: document.getElementById(id+'-sector').value || '',
       region: document.getElementById(id+'-region').value || '',
     });
@@ -481,6 +495,7 @@ function getNieuweSituatie(){
       msStars: document.getElementById(id+'-stars').value || '',
       ms: document.getElementById(id+'-ms').value || '',
       ter: parseFloat(document.getElementById(id+'-ter').value) || null,
+      fondsvolume: parseFloat(document.getElementById(id+'-fondsvolume').value) || null,
       sector: document.getElementById(id+'-sector').value || '',
       region: document.getElementById(id+'-region').value || '',
     });
@@ -551,6 +566,10 @@ function resultRowHtml(r){
   if(r.trackingDiff != null){
     diffs.push(`<span>Trackingdifference: <b>${r.trackingDiff.toFixed(2)}%</b></span>`);
   }
+  if(r.fondsvolume && (r.fondsvolume.oud != null || r.fondsvolume.nieuw != null)){
+    const fvClass = r.fondsvolume.onderMinimum ? 'diff-onder-minimum' : (r.fondsvolume.gedaald ? 'diff-slechter' : '');
+    diffs.push(`<span>Fondsvolume: <b class="${fvClass}">${r.fondsvolume.oud!=null?'€'+r.fondsvolume.oud+' mln':'—'} → ${r.fondsvolume.nieuw!=null?'€'+r.fondsvolume.nieuw+' mln':'—'}</b></span>`);
+  }
   return `
   <div class="result-row ${cls}">
     <div class="result-head">
@@ -559,6 +578,7 @@ function resultRowHtml(r){
     </div>
     <div class="result-toelichting ${cls}">${r.toelichting}</div>
     ${r.sterrenSignaal ? `<div class="result-signaal">⚠ ${r.sterrenSignaal}</div>` : ''}
+    ${r.fondsvolumeSignaal ? `<div class="result-signaal fondsvolume">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
     ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
   </div>`;
 }
@@ -594,6 +614,7 @@ function slaOpAlsJaarcheckJSON(){
       ter: r.ter ? r.ter.nieuw : null,
       msStars: r.msStars ? r.msStars.nieuw : '',
       ms: r.ms ? r.ms.nieuw : '',
+      fondsvolume: r.fondsvolume ? r.fondsvolume.nieuw : null,
       trackingDiff: r.trackingDiff,
       consecutiveUnderperformanceYears: r.consecutiveUnderperformanceYears || 0,
       dalendeSterrenJaren: r.dalendeSterrenJaren || 0,
@@ -681,6 +702,10 @@ async function downloadPDF(){
       if(r.msStars && (r.msStars.oud || r.msStars.nieuw)) diffPartsPdf.push(`Sterren: <span style="color:${richtingKleurPdf(r.msStars.richting)};font-weight:700">${r.msStars.oud||'—'} → ${r.msStars.nieuw||'—'}</span>`);
       if(r.ms && (r.ms.oud || r.ms.nieuw)) diffPartsPdf.push(`Rating: <span style="color:${richtingKleurPdf(r.ms.richting)};font-weight:700">${r.ms.oud||'—'} → ${r.ms.nieuw||'—'}</span>`);
       if(r.trackingDiff != null) diffPartsPdf.push(`Trackingdifference: ${r.trackingDiff.toFixed(2)}%`);
+      if(r.fondsvolume && (r.fondsvolume.oud != null || r.fondsvolume.nieuw != null)){
+        const fvKleurPdf = r.fondsvolume.onderMinimum || r.fondsvolume.gedaald ? '#c0003a' : '#1A1F36';
+        diffPartsPdf.push(`Fondsvolume: <span style="color:${fvKleurPdf};font-weight:700">${r.fondsvolume.oud!=null?'€'+r.fondsvolume.oud+' mln':'—'} → ${r.fondsvolume.nieuw!=null?'€'+r.fondsvolume.nieuw+' mln':'—'}</span>`);
+      }
       const diffsHtmlPdf = diffPartsPdf.length ? `<div style="font-size:9px;color:#555;margin-top:6px">${diffPartsPdf.join(' &nbsp;·&nbsp; ')}</div>` : '';
       tabelHtml += `<div style="border-left:3px solid ${kleur};background:#f9f8fc;border-radius:6px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -689,6 +714,7 @@ async function downloadPDF(){
         </div>
         <div style="font-size:11px;color:#333;margin-top:4px;line-height:1.5">${r.toelichting}</div>
         ${r.sterrenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.sterrenSignaal}</div>` : ''}
+        ${r.fondsvolumeSignaal ? `<div style=\"font-size:10px;color:#c0003a;margin-top:4px;font-style:italic\">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
         ${diffsHtmlPdf}
       </div>`;
     });
@@ -696,7 +722,7 @@ async function downloadPDF(){
 
     let disclaimerHtml = `<div style="border:1px solid #d0c4e0;border-radius:8px;padding:12px 16px;margin-top:6px">
       <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:10px;color:#6B2D84;margin-bottom:4px">BELANGRIJK</div>
-      <div style="font-size:9px;color:#1A1F36;line-height:1.5">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens, waaronder trackingdifference (zelf opgezocht via trackingdifferences.com) en Morningstar Rating/sterren (zelf opgezocht via morningstar.nl). De inlegverdeling van je portefeuille wordt door deze check nooit aangepast — uitsluitend behouden/monitoren/wisselen per ETF. Dit is een hulpmiddel, geen beleggingsadvies. Controleer alle gegevens altijd zelf via officiële bronnen. Juistheid en volledigheid worden niet gegarandeerd.</div>
+      <div style="font-size:9px;color:#1A1F36;line-height:1.5">Deze Jaarcheck is gebaseerd op door jou ingevoerde gegevens, waaronder trackingdifference (zelf opgezocht via trackingdifferences.com), Morningstar Rating/sterren en fondsvolume (beide zelf opgezocht via morningstar.nl). De inlegverdeling van je portefeuille wordt door deze check nooit aangepast — uitsluitend behouden/monitoren/wisselen per ETF. Dit is een hulpmiddel, geen beleggingsadvies. Controleer alle gegevens altijd zelf via officiële bronnen. Juistheid en volledigheid worden niet gegarandeerd.</div>
     </div>`;
 
     let footerHtml = `<div style="margin-top:20px;padding-top:14px;border-top:1px solid #e8e2f0;text-align:center">
