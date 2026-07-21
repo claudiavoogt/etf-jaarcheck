@@ -241,6 +241,15 @@ function handleFile(file){
       }
       oudeData = data;
       oudeBron = (data.versie && String(data.versie).startsWith('jaarcheck')) ? 'jaarcheck' : 'analyzer';
+      // Bootstrap-export (hoofdtool) gebruikt het veld 'aum' voor fondsvolume, de jaarcheck zelf 'fondsvolume'.
+      // Bij een bootstrap-import hier normaliseren zodat 'Vorig jaar' en de vergelijking het fondsvolume tonen.
+      if(oudeBron === 'analyzer'){
+        oudeData.etfs = oudeData.etfs.map(etf => (
+          etf.fondsvolume == null && etf.aum != null
+            ? { ...etf, fondsvolume: etf.aum }
+            : etf
+        ));
+      }
       renderProfielSummary();
       renderInvoerRijen();
       document.getElementById('add-actions').style.display = 'flex';
