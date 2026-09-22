@@ -263,14 +263,12 @@ function handleFile(file){
 
 function renderProfielSummary(){
   const box = document.getElementById('profiel-summary');
-  const hLabel = horizonLabels[oudeData.horizon] || oudeData.horizon || '—';
   const bronLabel = oudeBron === 'jaarcheck'
     ? 'Vorige jaarcheck ingeladen — onderperformance van vorig jaar telt automatisch mee.'
     : 'Eerste jaarcheck — er is nog geen geschiedenis, dus elk signaal telt als eerste jaar.';
   box.innerHTML = `
     <div class="profiel-title">Vorige situatie</div>
     <div class="profiel-line"><strong>Datum vorige check:</strong> ${oudeData.datum || '—'}</div>
-    <div class="profiel-line"><strong>Horizon:</strong> ${hLabel} &nbsp;|&nbsp; <strong>Maandinleg:</strong> €${oudeData.inleg || 0} &nbsp;|&nbsp; <strong>Core-weging:</strong> ${oudeData.coreWeight != null ? oudeData.coreWeight + '%' : '—'}</div>
     <div class="profiel-line"><strong>Aantal ETF's:</strong> ${oudeData.etfs.length}</div>
     <div class="profiel-line" style="margin-top:8px;color:var(--text-muted);font-style:italic">${bronLabel}</div>
   `;
@@ -672,14 +670,12 @@ async function downloadPDF(){
     page.innerHTML = headerHtml;
 
     // Vorige situatie (staat op het scherm vóór de metrics, dus ook hier eerst)
-    const hLabelPdf = horizonLabels[oudeData.horizon] || oudeData.horizon || '—';
     const bronLabelPdf = oudeBron === 'jaarcheck'
       ? 'Vorige jaarcheck ingeladen — onderperformance van vorig jaar telt automatisch mee.'
       : 'Eerste jaarcheck — er is nog geen geschiedenis, dus elk signaal telt als eerste jaar.';
     let profielHtmlPdf = '<div style="background:white;border:1px solid #d0c4e0;border-radius:8px;padding:14px;margin-bottom:16px">';
     profielHtmlPdf += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#6B2D84;margin-bottom:8px">Vorige situatie</div>';
     profielHtmlPdf += `<div style="font-size:11px;color:#1A1F36;margin-bottom:4px"><strong>Datum vorige check:</strong> ${oudeData.datum || '—'}</div>`;
-    profielHtmlPdf += `<div style="font-size:11px;color:#1A1F36;margin-bottom:4px"><strong>Horizon:</strong> ${hLabelPdf} &nbsp;|&nbsp; <strong>Maandinleg:</strong> €${oudeData.inleg || 0} &nbsp;|&nbsp; <strong>Core-weging:</strong> ${oudeData.coreWeight != null ? oudeData.coreWeight + '%' : '—'}</div>`;
     profielHtmlPdf += `<div style="font-size:11px;color:#1A1F36;margin-bottom:4px"><strong>Aantal ETF's:</strong> ${oudeData.etfs.length}</div>`;
     profielHtmlPdf += `<div style="font-size:10px;color:#555;font-style:italic;margin-top:4px">${bronLabelPdf}</div>`;
     profielHtmlPdf += '</div>';
