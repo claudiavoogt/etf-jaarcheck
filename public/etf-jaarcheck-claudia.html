@@ -390,8 +390,11 @@ function bestaandRowHtml(etf){
         </div>
       </div>
       <div>
-        <label>Fondsvolume nu <span>(€ mln)</span></label>
-        <input type="number" id="${id}-fondsvolume" placeholder="bijv. 850" step="1" min="0">
+        <label>Fondsvolume nu</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="${id}-fondsvolume" placeholder="bijv. 850" step="1" min="0" style="flex:1">
+          <select id="${id}-fondsvolume-unit" style="width:68px;flex-shrink:0"><option value="mln" selected>mln</option><option value="mrd">mrd</option></select>
+        </div>
       </div>
     </div>
     <input type="hidden" id="${id}-isin" value="${(etf.isin||'').replace(/"/g,'&quot;')}">
@@ -445,8 +448,11 @@ function nieuwRowHtml(id, n){
         <select id="${id}-ms">${ratingOptions('')}</select>
       </div>
       <div>
-        <label>Fondsvolume <span>(€ mln)</span></label>
-        <input type="number" id="${id}-fondsvolume" placeholder="bijv. 850" step="1" min="0">
+        <label>Fondsvolume</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="${id}-fondsvolume" placeholder="bijv. 850" step="1" min="0" style="flex:1">
+          <select id="${id}-fondsvolume-unit" style="width:68px;flex-shrink:0"><option value="mln" selected>mln</option><option value="mrd">mrd</option></select>
+        </div>
       </div>
     </div>
     <input type="hidden" id="${id}-sector" value="">
@@ -473,6 +479,13 @@ function verwijderNieuwRow(id){
 
 /* ---------- Analyse uitvoeren ---------- */
 
+function fondsvolumeInMln(id){
+  const v = parseFloat(document.getElementById(id+'-fondsvolume').value);
+  if(isNaN(v) || v === 0) return null;
+  const unit = document.getElementById(id+'-fondsvolume-unit').value;
+  return unit === 'mrd' ? v * 1000 : v;
+}
+
 function getNieuweSituatie(){
   const rows = [];
   oudeData.etfs.forEach(etf => {
@@ -486,7 +499,7 @@ function getNieuweSituatie(){
       msStars: verwijderd ? '' : (document.getElementById(id+'-stars').value || ''),
       ms: verwijderd ? '' : (document.getElementById(id+'-ms').value || ''),
       ter: verwijderd ? null : (parseFloat(document.getElementById(id+'-ter').value) || null),
-      fondsvolume: verwijderd ? null : (parseFloat(document.getElementById(id+'-fondsvolume').value) || null),
+      fondsvolume: verwijderd ? null : fondsvolumeInMln(id),
       sector: document.getElementById(id+'-sector').value || '',
       region: document.getElementById(id+'-region').value || '',
     });
@@ -502,7 +515,7 @@ function getNieuweSituatie(){
       msStars: document.getElementById(id+'-stars').value || '',
       ms: document.getElementById(id+'-ms').value || '',
       ter: parseFloat(document.getElementById(id+'-ter').value) || null,
-      fondsvolume: parseFloat(document.getElementById(id+'-fondsvolume').value) || null,
+      fondsvolume: fondsvolumeInMln(id),
       sector: document.getElementById(id+'-sector').value || '',
       region: document.getElementById(id+'-region').value || '',
     });
