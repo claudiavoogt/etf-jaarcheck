@@ -593,6 +593,7 @@ function resultRowHtml(r){
     <div class="result-toelichting ${cls}">${r.toelichting}</div>
     ${r.sterrenSignaal ? `<div class="result-signaal">⚠ ${r.sterrenSignaal}</div>` : ''}
     ${r.fondsvolumeSignaal ? `<div class="result-signaal fondsvolume">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
+    ${r.kostenSignaal ? `<div class="result-signaal">⚠ ${r.kostenSignaal}</div>` : ''}
     ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
   </div>`;
 }
@@ -633,6 +634,7 @@ function slaOpAlsJaarcheckJSON(){
       consecutiveUnderperformanceYears: r.consecutiveUnderperformanceYears || 0,
       dalendeSterrenJaren: r.dalendeSterrenJaren || 0,
       fondsvolumeOnderMinimumJaren: r.fondsvolumeOnderMinimumJaren || 0,
+      terGestegenJaren: r.terGestegenJaren || 0,
       beslissingVorigJaar: r.beslissing,
     }));
   const data = {
@@ -728,6 +730,7 @@ async function downloadPDF(){
         <div style="font-size:11px;color:#333;margin-top:4px;line-height:1.5">${r.toelichting}</div>
         ${r.sterrenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.sterrenSignaal}</div>` : ''}
         ${r.fondsvolumeSignaal ? `<div style=\"font-size:10px;color:#c0003a;margin-top:4px;font-style:italic\">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
+        ${r.kostenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.kostenSignaal}</div>` : ''}
         ${diffsHtmlPdf}
       </div>`;
     });
