@@ -525,12 +525,6 @@ function getNieuweSituatie(){
 
 async function runAnalyse(){
   const nieuweEtfs = getNieuweSituatie();
-  const ontbrekendeTD = nieuweEtfs.filter(e => !e.verwijderd && (e.trackingDiff === null || e.trackingDiff === undefined || isNaN(e.trackingDiff)));
-  if(ontbrekendeTD.length){
-    const namen = ontbrekendeTD.map(e => e.isin || e.id).join(', ');
-    const doorgaan = confirm(`Bij ${ontbrekendeTD.length} ETF('s) is geen trackingdifference ingevuld (${namen}). Zonder trackingdifference wordt alleen op basis van de rating beoordeeld. Toch doorgaan met de analyse?`);
-    if(!doorgaan) return;
-  }
 
   const btn = document.getElementById('analyse-btn');
   btn.disabled = true;
