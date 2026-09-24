@@ -360,6 +360,7 @@ function bepaalBeslissing(opts: {
       neutraalDalendSterrenGewaarschuwd,
       kwaliteitIsHoofdreden: false,
       neutraalTrajectIsHoofdreden: true,
+      tdIsHoofdreden: false,
     };
   }
 
