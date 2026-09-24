@@ -166,6 +166,8 @@ select option{background:#1A1F36}
 
   <div id="output" style="display:none">
 
+    <div id="portefeuille-waarschuwing" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;background:rgba(255,107,53,0.14);border:1.5px solid var(--oranje);font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:var(--oranje);line-height:1.6"></div>
+
     <div class="metrics">
       <div class="metric"><div class="metric-label">Totaal</div><div class="metric-val" id="m-totaal">0</div></div>
       <div class="metric"><div class="metric-label">Behouden</div><div class="metric-val" id="m-behouden" style="color:var(--mint)">0</div></div>
@@ -591,9 +593,11 @@ function resultRowHtml(r){
       <span class="tag tag-${cls}">${label}</span>
     </div>
     <div class="result-toelichting ${cls}">${r.toelichting}</div>
+    ${r.tdSignaal ? `<div class="result-signaal">⚠ ${r.tdSignaal}</div>` : ''}
     ${r.sterrenSignaal ? `<div class="result-signaal">⚠ ${r.sterrenSignaal}</div>` : ''}
     ${r.fondsvolumeSignaal ? `<div class="result-signaal fondsvolume">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
     ${r.kostenSignaal ? `<div class="result-signaal">⚠ ${r.kostenSignaal}</div>` : ''}
+    ${r.kwaliteitSignaal ? `<div class="result-signaal">⚠ ${r.kwaliteitSignaal}</div>` : ''}
     ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
   </div>`;
 }
@@ -606,6 +610,14 @@ function renderResultaten(data){
   document.getElementById('m-monitoren').textContent = s.monitoren;
   document.getElementById('m-wisselen').textContent = s.wisselen;
   document.getElementById('m-nieuwweg').textContent = (s.nieuw + s.verwijderd);
+
+  const waarschuwingBox = document.getElementById('portefeuille-waarschuwing');
+  if(data.portefeuilleWaarschuwing){
+    waarschuwingBox.textContent = '⚠ ' + data.portefeuilleWaarschuwing;
+    waarschuwingBox.style.display = 'block';
+  } else {
+    waarschuwingBox.style.display = 'none';
+  }
 
   // Zelfde volgorde als de ingevoerde ETF's, geen sortering op besluit
   document.getElementById('resultaten-list').innerHTML = data.resultaten.map(resultRowHtml).join('');
@@ -635,6 +647,11 @@ function slaOpAlsJaarcheckJSON(){
       dalendeSterrenJaren: r.dalendeSterrenJaren || 0,
       fondsvolumeOnderMinimumJaren: r.fondsvolumeOnderMinimumJaren || 0,
       terGestegenJaren: r.terGestegenJaren || 0,
+      sterrenOnder3Jaren: r.sterrenOnder3Jaren || 0,
+      ratingGedaaldJaren: r.ratingGedaaldJaren || 0,
+      ratingNeutralJaren: r.ratingNeutralJaren || 0,
+      sterrenBijStartNeutralStreak: r.sterrenBijStartNeutralStreak ?? null,
+      neutraalDalendSterrenGewaarschuwd: r.neutraalDalendSterrenGewaarschuwd || false,
       beslissingVorigJaar: r.beslissing,
     }));
   const data = {
@@ -728,13 +745,19 @@ async function downloadPDF(){
           <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:${kleur}">${labelPerBeslissing[r.beslissing]||r.beslissing}</span>
         </div>
         <div style="font-size:11px;color:#333;margin-top:4px;line-height:1.5">${r.toelichting}</div>
+        ${r.tdSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.tdSignaal}</div>` : ''}
         ${r.sterrenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.sterrenSignaal}</div>` : ''}
         ${r.fondsvolumeSignaal ? `<div style=\"font-size:10px;color:#c0003a;margin-top:4px;font-style:italic\">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
         ${r.kostenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.kostenSignaal}</div>` : ''}
+        ${r.kwaliteitSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.kwaliteitSignaal}</div>` : ''}
         ${diffsHtmlPdf}
       </div>`;
     });
     tabelHtml += '</div>';
+
+    if(data.portefeuilleWaarschuwing){
+      tabelHtml = `<div style="border:1.5px solid #c07840;background:#fdf3ea;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:10px;font-weight:700;color:#c07840;line-height:1.5">⚠ ${data.portefeuilleWaarschuwing}</div>` + tabelHtml;
+    }
 
     let disclaimerHtml = `<div style="border:1px solid #d0c4e0;border-radius:8px;padding:12px 16px;margin-top:6px">
       <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:10px;color:#6B2D84;margin-bottom:4px">BELANGRIJK</div>
