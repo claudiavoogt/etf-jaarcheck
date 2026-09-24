@@ -586,19 +586,20 @@ function resultRowHtml(r){
     const fvClass = r.fondsvolume.onderMinimum ? 'diff-onder-minimum' : (r.fondsvolume.gedaald ? 'diff-slechter' : '');
     diffs.push(`<span>Fondsvolume: <b class="${fvClass}">${r.fondsvolume.oud!=null?'€'+r.fondsvolume.oud+' mln':'—'} → ${r.fondsvolume.nieuw!=null?'€'+r.fondsvolume.nieuw+' mln':'—'}</b></span>`);
   }
+  const toelichtingCls = r.tdIsHoofdreden ? 'monitoren' : cls;
   return `
   <div class="result-row ${cls}">
     <div class="result-head">
       <div><span class="result-name">${r.name || r.isin || r.id}</span><span class="result-isin">${r.isin||''}</span></div>
       <span class="tag tag-${cls}">${label}</span>
     </div>
-    <div class="result-toelichting ${cls}">${r.toelichting}</div>
+    ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
+    <div class="result-toelichting ${toelichtingCls}">${r.toelichting}</div>
     ${r.tdSignaal ? `<div class="result-signaal">⚠ ${r.tdSignaal}</div>` : ''}
     ${r.sterrenSignaal ? `<div class="result-signaal">⚠ ${r.sterrenSignaal}</div>` : ''}
     ${r.fondsvolumeSignaal ? `<div class="result-signaal fondsvolume">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
     ${r.kostenSignaal ? `<div class="result-signaal">⚠ ${r.kostenSignaal}</div>` : ''}
     ${r.kwaliteitSignaal ? `<div class="result-signaal">⚠ ${r.kwaliteitSignaal}</div>` : ''}
-    ${diffs.length ? `<div class="result-diffs">${diffs.join('')}</div>` : ''}
   </div>`;
 }
 
@@ -744,13 +745,13 @@ async function downloadPDF(){
           <span style="font-weight:700;font-size:13px;color:#1A1F36">${r.name||r.isin||r.id} <span style="font-size:10px;color:#6B2D84;font-weight:600">${r.isin||''}</span></span>
           <span style="font-size:10px;font-weight:800;text-transform:uppercase;color:${kleur}">${labelPerBeslissing[r.beslissing]||r.beslissing}</span>
         </div>
-        <div style="font-size:11px;color:#333;margin-top:4px;line-height:1.5">${r.toelichting}</div>
+        ${diffsHtmlPdf}
+        <div style="font-size:11px;color:${r.tdIsHoofdreden ? '#c07840' : '#333'};margin-top:6px;line-height:1.5">${r.toelichting}</div>
         ${r.tdSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.tdSignaal}</div>` : ''}
         ${r.sterrenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.sterrenSignaal}</div>` : ''}
         ${r.fondsvolumeSignaal ? `<div style=\"font-size:10px;color:#c0003a;margin-top:4px;font-style:italic\">⚠ ${r.fondsvolumeSignaal}</div>` : ''}
         ${r.kostenSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.kostenSignaal}</div>` : ''}
         ${r.kwaliteitSignaal ? `<div style=\"font-size:10px;color:#c07840;margin-top:4px;font-style:italic\">⚠ ${r.kwaliteitSignaal}</div>` : ''}
-        ${diffsHtmlPdf}
       </div>`;
     });
     tabelHtml += '</div>';

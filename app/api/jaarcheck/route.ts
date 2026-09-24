@@ -27,7 +27,12 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Geen trackingdifference beschikbaar/ingevuld => GEEN aparte escalatie naar "monitoren". Decision blijft
  *   "behouden" (tenzij een andere regel hierboven al iets anders bepaalt) — gewoon beoordelen op wat wél
  *   bekend is (sterren/rating). Meldingstekst: "Geen trackingdifference bekend/ingevuld, maak zelf de berekening."
- *   (puur een tekstmelding, geen aparte beslislogica).
+ *   (puur een tekstmelding, geen aparte beslislogica). In de HTML wordt deze specifieke melding altijd
+ *   oranje getoond (tdIsHoofdreden), ook al is de decision "behouden" — dat blijft een aandachtspunt, geen
+ *   "helemaal in orde".
+ * - Presteert boven/rond benchmark (geen onderperformance) EN trackingdifference wél bekend EN rating in orde
+ *   => toelichting is puur "Alles in orde, geen actie." (geen cijfers herhalen — alleen bij een probleem of
+ *   aandachtspunt worden details getoond).
  * - Teruglopend fondsvolume t.o.v. vorig jaar (maar nog boven de minimale grens) is een signaal/waarschuwing,
  *   geen zelfstandige wisselreden — puur "in de gaten houden".
  * - Sterren/rating kwaliteit (per ETF, jaar-op-jaar, "2e jaarcheck" = 2 keer op rij geconstateerd):
@@ -421,7 +426,7 @@ function bepaalBeslissing(opts: {
     if (trackingDiff != null) {
       basis = {
         beslissing: 'behouden',
-        toelichting: `Presteert boven of rond benchmark (trackingdifference ${trackingDiff.toFixed(2)}%), rating in orde. Geen actie.`,
+        toelichting: 'Alles in orde, geen actie.',
       };
     } else {
       // Geen TD bekend: geen aparte escalatie naar "monitoren" — gewoon beoordelen op wat wél bekend is
@@ -585,6 +590,7 @@ export async function POST(request: NextRequest) {
           neutraalDalendSterrenGewaarschuwd: false,
           kwaliteitSignaal: null,
           tdSignaal: null,
+          tdIsHoofdreden: false,
         });
         continue;
       }
@@ -698,6 +704,7 @@ export async function POST(request: NextRequest) {
         kostenSignaal,
         kwaliteitSignaal,
         tdSignaal,
+        tdIsHoofdreden,
         sector: { oud: oud.sector || '', nieuw: sectorNieuw, gewijzigd: (oud.sector || '') !== sectorNieuw },
         region: { oud: oud.region || '', nieuw: regionNieuw, gewijzigd: (oud.region || '') !== regionNieuw },
         ter: {
@@ -779,6 +786,7 @@ export async function POST(request: NextRequest) {
         kostenSignaal: null,
         kwaliteitSignaal: null,
         tdSignaal: tdSignaalNieuw,
+        tdIsHoofdreden,
         sector: { oud: null, nieuw: n.sector || '', gewijzigd: false },
         region: { oud: null, nieuw: n.region || '', gewijzigd: false },
         ter: { oud: null, nieuw: terNieuw, verschil: null, gewijzigd: false },
