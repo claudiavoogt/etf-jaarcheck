@@ -564,7 +564,7 @@ async function runAnalyse(){
 function fmtTer(v){ return v!=null ? v.toFixed(2)+'%' : '—'; }
 
 function resultRowHtml(r){
-  const label = {behouden:'Behouden', monitoren:'Monitoren', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'}[r.beslissing] || r.beslissing;
+  const label = {behouden:'Behouden', monitoren:'Check na 6 maanden', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'}[r.beslissing] || r.beslissing;
   const cls = r.beslissing;
   const diffs = [];
   if(r.ter && r.ter.oud != null && r.ter.nieuw != null){
@@ -707,7 +707,7 @@ async function downloadPDF(){
 
     const gesorteerd = data.resultaten; // zelfde volgorde als de ingevoerde ETF's, geen sortering op besluit
     const kleurPerBeslissing = {behouden:'#3edcb1', monitoren:'#FF6B35', wisselen:'#c0003a', verwijderd:'#8890b8', nieuw:'#4682DC'};
-    const labelPerBeslissing = {behouden:'Behouden', monitoren:'Monitoren', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'};
+    const labelPerBeslissing = {behouden:'Behouden', monitoren:'Check na 6 maanden', wisselen:'Wisselen', verwijderd:'Verwijderd', nieuw:'Nieuw'};
 
     let tabelHtml = '<div style="background:white;border:1px solid #d0c4e0;border-radius:8px;padding:16px;margin-bottom:16px">';
     tabelHtml += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#6B2D84;margin-bottom:12px">Resultaten per ETF</div>';

@@ -171,13 +171,17 @@ function bepaalBeslissing(opts: {
   let basis: { beslissing: string; toelichting: string };
 
   if (!onderBenchmark) {
-    basis = {
-      beslissing: 'behouden',
-      toelichting:
-        trackingDiff != null
-          ? `Presteert boven of rond benchmark (trackingdifference ${trackingDiff.toFixed(2)}%), rating in orde. Geen actie.`
-          : 'Geen trackingdifference ingevuld — geen benchmarksignaal, rating in orde. Geen actie.',
-    };
+    if (trackingDiff != null) {
+      basis = {
+        beslissing: 'behouden',
+        toelichting: `Presteert boven of rond benchmark (trackingdifference ${trackingDiff.toFixed(2)}%), rating in orde. Geen actie.`,
+      };
+    } else {
+      basis = {
+        beslissing: 'monitoren',
+        toelichting: 'Geen trackingdifference beschikbaar/ingevuld. Beoordeel zelf op Morningstar.',
+      };
+    }
   } else {
     // Onder benchmark (trackingdifference > 1.5%)
     const ratingVoldoende = ratingRang(msNieuw) >= 3; // Gold/Silver/Bronze
