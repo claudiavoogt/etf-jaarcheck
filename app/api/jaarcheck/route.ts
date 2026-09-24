@@ -35,6 +35,9 @@ import { NextRequest, NextResponse } from 'next/server';
  *   aandachtspunt worden details getoond).
  * - Teruglopend fondsvolume t.o.v. vorig jaar (maar nog boven de minimale grens) is een signaal/waarschuwing,
  *   geen zelfstandige wisselreden — puur "in de gaten houden".
+ * - Rating-signaal: zodra de rating dit jaar gedaald is (1 jaar), los signaal onder de ETF — zelfde opzet
+ *   als het sterren-signaal. Bij 2 jaar op rij gedaald neemt kwaliteitSignaal/het Neutraal-traject het over
+ *   (uitgebreidere tekst), dus dan verschijnt dit signaal niet nogmaals.
  * - Sterren/rating kwaliteit (per ETF, jaar-op-jaar, "2e jaarcheck" = 2 keer op rij geconstateerd):
  *   - Sterren <3 (1 of 2), 2e jaarcheck op rij in die staat, rating Neutral of Bronze => wisselen.
  *   - Sterren <3, 2e jaarcheck op rij, rating Silver of Gold => geen wissel, signaal, volgend jaar herchecken.
@@ -589,6 +592,7 @@ export async function POST(request: NextRequest) {
           sterrenBijStartNeutralStreak: null,
           neutraalDalendSterrenGewaarschuwd: false,
           kwaliteitSignaal: null,
+          ratingSignaal: null,
           tdSignaal: null,
           tdIsHoofdreden: false,
         });
@@ -647,6 +651,14 @@ export async function POST(request: NextRequest) {
           ? `Sterren zijn gedaald (${oud.msStars || '—'} → ${n.msStars || '—'}).`
           : null;
 
+      // Rating-signaal: zelfde opzet als het sterren-signaal — toon het zodra de rating dit jaar gedaald is.
+      // Bij 2 jaar op rij gedaald wordt dit al afgehandeld door kwaliteitSignaal/het Neutraal-traject
+      // (uitgebreidere, specifiekere tekst), dus hier alleen de eenmalige/dit-jaar-daling.
+      const ratingGedaaldDitJaar = ratingRang(n.ms) > 0 && ratingRang(oud.ms) > 0 && ratingRang(n.ms) < ratingRang(oud.ms);
+      const ratingSignaal = (ratingGedaaldDitJaar && ratingGedaaldJaren < 2)
+        ? `Rating is gedaald (${oud.ms || '—'} → ${n.ms || '—'}).`
+        : null;
+
       // TD-signaal: altijd tonen zodra er geen trackingdifference bekend is, tenzij dat al letterlijk de
       // toelichting van de beslissing zelf is (dan staat het al boven de ETF, geen dubbele melding nodig).
       const tdSignaal = (trackingDiff == null && !tdIsHoofdreden)
@@ -700,6 +712,7 @@ export async function POST(request: NextRequest) {
         beslissing,
         toelichting,
         sterrenSignaal,
+        ratingSignaal,
         fondsvolumeSignaal,
         kostenSignaal,
         kwaliteitSignaal,
@@ -782,6 +795,7 @@ export async function POST(request: NextRequest) {
         beslissing,
         toelichting: `Nieuw toegevoegd sinds de vorige check — geen historie. ${toelichting}`,
         sterrenSignaal: null,
+        ratingSignaal: null,
         fondsvolumeSignaal: null,
         kostenSignaal: null,
         kwaliteitSignaal: null,
